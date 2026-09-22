@@ -16,9 +16,15 @@ function base58(bytes) {
   return result;
 }
 mkdirSync("anchor/target/deploy", { recursive: true });
-for (const name of ["bidwall", "vault", "lender_harness"]) {
+// malicious_lender is a test fixture that deliberately reuses lender_harness's identity.
+for (const [name, identity] of [
+  ["bidwall", "bidwall"],
+  ["vault", "vault"],
+  ["lender_harness", "lender_harness"],
+  ["malicious_lender", "lender_harness"],
+]) {
   const seed = createHash("sha256")
-    .update(`bidwall/local-only/v1/${name}`)
+    .update(`bidwall/local-only/v1/${identity}`)
     .digest();
   const privateKey = createPrivateKey({
     key: Buffer.concat([

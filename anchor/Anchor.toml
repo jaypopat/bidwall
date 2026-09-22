@@ -10,6 +10,9 @@ bidwall = "HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37"
 
 lender_harness = "2JHZer7Zz7BKFTdHcnrvqAtPMf7zugw5rGbXT14cUw1N"
 
+# Test fixture: simulates a compromised upgrade of lender_harness at the same address.
+malicious_lender = "2JHZer7Zz7BKFTdHcnrvqAtPMf7zugw5rGbXT14cUw1N"
+
 vault = "83KZdkZAQMf4z85U8YBzTcXfRKcpYmebyXS77AkWVH6Y"
 
 [provider]
