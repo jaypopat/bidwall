@@ -1,14 +1,14 @@
 [toolchain]
+anchor_version = "1.1.2"
 
 [features]
 resolution = true
 skip-lint = false
 
 [programs.localnet]
-bidwall = "Fg6PaFpoGXkYsidMpWxTWqkZ7FEfcYkgMQHGgzYcWkPa"
+bidwall = "HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37"
 
-[programs.devnet]
-vault = "a7qKPYTYnxcs5HPB5hbioiBcRSoMAbAQxJCLB6Dds5A"
+vault = "83KZdkZAQMf4z85U8YBzTcXfRKcpYmebyXS77AkWVH6Y"
 
 [provider]
 cluster = "localnet"

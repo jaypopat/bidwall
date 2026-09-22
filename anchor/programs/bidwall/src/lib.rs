@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_spl::token::{self, Mint, Token, TokenAccount, TransferChecked};
 
-declare_id!("Fg6PaFpoGXkYsidMpWxTWqkZ7FEfcYkgMQHGgzYcWkPa");
+declare_id!("HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37");
 #[cfg(test)]
 mod tests;
 
@@ -314,10 +314,10 @@ pub struct CreateMarket<'info> {
     pub authority: Signer<'info>,
     #[account(init, payer = authority, space = 8 + Market::INIT_SPACE)]
     pub market: Account<'info, Market>,
-    pub collateral_mint: Account<'info, Mint>,
-    pub usdc_mint: Account<'info, Mint>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init, payer = authority, seeds = [b"debt", market.key().as_ref()], bump, token::mint = usdc_mint, token::authority = market)]
-    pub debt_vault: Account<'info, TokenAccount>,
+    pub debt_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -337,11 +337,11 @@ pub struct OpenPosition<'info> {
     pub borrower: UncheckedAccount<'info>,
     #[account(init, payer = authority, space = 8 + Position::INIT_SPACE)]
     pub position: Account<'info, Position>,
-    pub collateral_mint: Account<'info, Mint>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(mut, token::mint = collateral_mint, token::authority = authority)]
-    pub source: Account<'info, TokenAccount>,
+    pub source: Box<Account<'info, TokenAccount>>,
     #[account(init, payer = authority, seeds = [b"collateral", position.key().as_ref()], bump, token::mint = collateral_mint, token::authority = collateral_vault)]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -352,11 +352,11 @@ pub struct CreateBid<'info> {
     pub provider: Signer<'info>,
     #[account(has_one = usdc_mint)]
     pub market: Account<'info, Market>,
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(init, payer = provider, space = 8 + Bid::INIT_SPACE, seeds = [b"bid", provider.key().as_ref(), &id.to_le_bytes()], bump)]
     pub bid: Account<'info, Bid>,
     #[account(init, payer = provider, seeds = [b"escrow", bid.key().as_ref()], bump, token::mint = usdc_mint, token::authority = bid)]
-    pub escrow: Account<'info, TokenAccount>,
+    pub escrow: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
     pub system_program: Program<'info, System>,
 }
@@ -367,11 +367,11 @@ pub struct ProviderBid<'info> {
     pub market: Account<'info, Market>,
     #[account(mut, has_one = provider, has_one = market, seeds = [b"bid", provider.key().as_ref(), &bid.id.to_le_bytes()], bump = bid.bump)]
     pub bid: Account<'info, Bid>,
-    pub usdc_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
     #[account(mut, seeds = [b"escrow", bid.key().as_ref()], bump, token::mint = usdc_mint, token::authority = bid)]
-    pub escrow: Account<'info, TokenAccount>,
+    pub escrow: Box<Account<'info, TokenAccount>>,
     #[account(mut, token::mint = usdc_mint, token::authority = provider)]
-    pub provider_usdc: Account<'info, TokenAccount>,
+    pub provider_usdc: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 #[derive(Accounts)]
@@ -383,18 +383,18 @@ pub struct Settle<'info> {
     pub bid: Account<'info, Bid>,
     #[account(mut, has_one = market)]
     pub position: Account<'info, Position>,
-    pub usdc_mint: Account<'info, Mint>,
-    pub collateral_mint: Account<'info, Mint>,
+    pub usdc_mint: Box<Account<'info, Mint>>,
+    pub collateral_mint: Box<Account<'info, Mint>>,
     #[account(mut, seeds = [b"escrow", bid.key().as_ref()], bump, token::mint = usdc_mint, token::authority = bid)]
-    pub escrow: Account<'info, TokenAccount>,
+    pub escrow: Box<Account<'info, TokenAccount>>,
     #[account(mut, seeds = [b"debt", market.key().as_ref()], bump, token::mint = usdc_mint, token::authority = market)]
-    pub debt_vault: Account<'info, TokenAccount>,
+    pub debt_vault: Box<Account<'info, TokenAccount>>,
     #[account(mut, token::mint = usdc_mint, constraint = borrower_usdc.owner == position.borrower)]
-    pub borrower_usdc: Account<'info, TokenAccount>,
+    pub borrower_usdc: Box<Account<'info, TokenAccount>>,
     #[account(mut, seeds = [b"collateral", position.key().as_ref()], bump, token::mint = collateral_mint, token::authority = collateral_vault)]
-    pub collateral_vault: Account<'info, TokenAccount>,
+    pub collateral_vault: Box<Account<'info, TokenAccount>>,
     #[account(mut, token::mint = collateral_mint, constraint = provider_collateral.owner == bid.provider)]
-    pub provider_collateral: Account<'info, TokenAccount>,
+    pub provider_collateral: Box<Account<'info, TokenAccount>>,
     pub token_program: Program<'info, Token>,
 }
 #[error_code]

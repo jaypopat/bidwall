@@ -24,7 +24,7 @@ import {
 } from "../instructions";
 
 export const VAULT_PROGRAM_ADDRESS =
-  "a7qKPYTYnxcs5HPB5hbioiBcRSoMAbAQxJCLB6Dds5A" as Address<"a7qKPYTYnxcs5HPB5hbioiBcRSoMAbAQxJCLB6Dds5A">;
+  "83KZdkZAQMf4z85U8YBzTcXfRKcpYmebyXS77AkWVH6Y" as Address<"83KZdkZAQMf4z85U8YBzTcXfRKcpYmebyXS77AkWVH6Y">;
 
 export enum VaultInstruction {
   Deposit,
@@ -63,7 +63,7 @@ export function identifyVaultInstruction(
 }
 
 export type ParsedVaultInstruction<
-  TProgram extends string = "a7qKPYTYnxcs5HPB5hbioiBcRSoMAbAQxJCLB6Dds5A",
+  TProgram extends string = "83KZdkZAQMf4z85U8YBzTcXfRKcpYmebyXS77AkWVH6Y",
 > =
   | ({
       instructionType: VaultInstruction.Deposit;
