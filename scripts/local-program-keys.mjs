@@ -16,7 +16,7 @@ function base58(bytes) {
   return result;
 }
 mkdirSync("anchor/target/deploy", { recursive: true });
-for (const name of ["bidwall", "vault"]) {
+for (const name of ["bidwall", "vault", "lender_harness"]) {
   const seed = createHash("sha256")
     .update(`bidwall/local-only/v1/${name}`)
     .digest();
