@@ -1,5 +1,9 @@
 # Bidwall core prototype
 
+> Milestone 2 moved the embedded lender harness into a separate program settled via CPI.
+> See [LENDER-ADAPTER.md](LENDER-ADAPTER.md); it supersedes the trust-boundary and
+> settlement sections below. Lifecycle, terms, units and rounding are unchanged.
+
 The first money-flow milestone implements the canonical brief's funded commitment
 and local lender harness. No frontend work or live deployment is included.
 

@@ -16,5 +16,8 @@ subprocess dispatch; build/test commands strip those variables. A real stack ove
 exposed by platform-tools v1.52 was fixed by boxing the token/mint account wrappers;
 it was not suppressed. All 23 pre-adapter workspace tests pass under this toolchain.
 
+`lender_harness` has its own local identity. The `malicious_lender` test fixture
+deliberately reuses it so tests can load it in place of the lender.
+
 This supersedes the version mismatch, placeholder ID and `--ignore-keys` notes in
 the first milestone's CORE-IMPLEMENTATION.md.

@@ -1,7 +1,8 @@
 # Bidwall
 
-The funded-bid core and local liquidation harness are implemented in
-`anchor/programs/bidwall`. See [core implementation and limitations](docs/CORE-IMPLEMENTATION.md)
+The funded-bid program is `anchor/programs/bidwall`. It settles through the separately
+deployed test lender `anchor/programs/lender_harness` via CPI. See the
+[lender-adapter boundary](docs/LENDER-ADAPTER.md), [core implementation](docs/CORE-IMPLEMENTATION.md)
 and the [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md).
 Run `npm run anchor-test` for SBF builds and adversarial tests, or
 `npm run demo:core` for the settlement/depletion scenario.
