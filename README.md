@@ -1,3 +1,16 @@
+# Bidwall
+
+The funded-bid core and local liquidation harness are implemented in
+`anchor/programs/bidwall`. See [core implementation and limitations](docs/CORE-IMPLEMENTATION.md)
+and the [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md).
+Run `npm run anchor-test` for SBF builds and adversarial tests, or
+`npm run demo:core` for the settlement/depletion scenario.
+
+The frontend below is still the original SOL-vault starter; it does not display or
+operate Bidwall commitments yet.
+
+---
+
 # bidwall
 
 Next.js starter with Tailwind CSS, `@solana/kit`, and an Anchor vault program example.

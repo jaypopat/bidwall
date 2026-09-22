@@ -4,11 +4,14 @@
 resolution = true
 skip-lint = false
 
+[programs.localnet]
+bidwall = "Fg6PaFpoGXkYsidMpWxTWqkZ7FEfcYkgMQHGgzYcWkPa"
+
 [programs.devnet]
 vault = "a7qKPYTYnxcs5HPB5hbioiBcRSoMAbAQxJCLB6Dds5A"
 
 [provider]
-cluster = "devnet"
+cluster = "localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]

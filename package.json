@@ -1,8 +1,8 @@
 {
   "name": "bidwall",
   "scripts": {
-    "anchor-build": "cd anchor && anchor build --ignore-keys",
-    "anchor-test": "cd anchor && anchor build --ignore-keys && cargo test",
+    "anchor-build": "cd anchor && env -u APPIMAGE -u APPDIR NO_DNA=1 anchor build --ignore-keys --arch v0",
+    "anchor-test": "npm run anchor-build && cargo test --manifest-path anchor/Cargo.toml --workspace",
     "build": "next build",
     "ci": "npm run build && npm run lint && npm run format:check",
     "codama:js": "codama run js",
@@ -11,7 +11,8 @@
     "format:check": "prettier --check .",
     "lint": "eslint",
     "setup": "npm run anchor-build && npm run codama:js",
-    "start": "next start"
+    "start": "next start",
+    "demo:core": "npm run anchor-build && cargo test --manifest-path anchor/Cargo.toml -p bidwall funded_partial_fill_depletion_and_residual_demo -- --nocapture"
   },
   "description": "Next.js, Tailwind, @solana/kit, Anchor vault program",
   "keywords": [
@@ -54,5 +55,6 @@
     "prettier": "^3.6.2",
     "tailwindcss": "^4",
     "typescript": "^5"
-  }
+  },
+  "packageManager": "pnpm@12.5.1"
 }
