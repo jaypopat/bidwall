@@ -10,6 +10,9 @@ Run `npm run anchor-test` for SBF builds and all 46 workspace tests,
 `npm run test:kamino` for the 17 real-lender replay tests, or
 `npm run demo:core` for the harness settlement/depletion scenario.
 
+The proposed next milestone and open product decisions are in
+[the demo roadmap](docs/NEXT-MILESTONE.md).
+
 The frontend below is still the original SOL-vault starter; it does not display or
 operate Bidwall commitments yet.
 
