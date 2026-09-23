@@ -1,0 +1,3 @@
+# This root uses prebuilt optional platform bindings; do not run fallback downloads.
+allowBuilds:
+  unrs-resolver: false

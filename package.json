@@ -5,7 +5,7 @@
     "anchor-test": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml --workspace",
     "build": "next build",
     "ci": "npm run build && npm run lint && npm run format:check",
-    "codama:js": "codama run js",
+    "codama:js": "codama run js && codama -c codama.bidwall.json run js",
     "dev": "next dev",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
@@ -13,7 +13,11 @@
     "setup": "npm run anchor-build && npm run codama:js",
     "start": "next start",
     "demo:core": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall funded_partial_fill_depletion_and_residual_demo -- --nocapture",
-    "test:kamino": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall tests::kamino"
+    "test:kamino": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall tests::kamino",
+    "codama:bidwall": "codama -c codama.bidwall.json run js",
+    "client:build": "tsc -p tsconfig.client.json",
+    "test:client": "npm run client:build && node --test tests/client/*.test.mjs",
+    "demo:kamino": "npm run anchor-build && npm run client:build && node scripts/demo/run.mjs"
   },
   "description": "Next.js, Tailwind, @solana/kit, Anchor vault program",
   "keywords": [
@@ -28,6 +32,8 @@
   "version": "0.0.0",
   "private": true,
   "dependencies": {
+    "@solana-program/address-lookup-table": "0.11.0",
+    "@solana-program/token": "0.12.0",
     "@solana/kit": "^6.3.0",
     "@solana/kit-client-rpc": "^0.7.0",
     "@solana/kit-plugin-rpc": "^0.7.0",

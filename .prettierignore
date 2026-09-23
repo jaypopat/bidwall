@@ -11,3 +11,5 @@ pnpm-workspace.yaml
 **/.surfpool/**
 **/*keypair.json
 spikes/kamino-cpi/evidence/
+
+/build/

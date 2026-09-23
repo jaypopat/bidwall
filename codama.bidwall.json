@@ -1,0 +1,8 @@
+{
+  "idl": "./anchor/target/idl/bidwall.json",
+  "scripts": {
+    "js": [
+      { "from": "@codama/renderers-js", "args": ["./app/generated/bidwall"] }
+    ]
+  }
+}
