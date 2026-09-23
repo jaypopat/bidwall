@@ -5,3 +5,9 @@ app/generated
 .agents
 agent
 pnpm-workspace.yaml
+
+# Local Rust build artifacts and fork runtime state
+**/target/**
+**/.surfpool/**
+**/*keypair.json
+spikes/kamino-cpi/evidence/

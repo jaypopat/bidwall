@@ -46,3 +46,6 @@ next-env.d.ts
 
 # solana local validator
 test-ledger/
+
+# Local fork runtime state
+**/.surfpool/
