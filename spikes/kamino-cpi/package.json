@@ -1,0 +1,12 @@
+{
+  "name": "kamino-cpi-spike",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "scenario": "node scenario.mjs"
+  },
+  "dependencies": {
+    "@kamino-finance/klend-sdk": "12.0.0",
+    "@solana/kit": "^2.3.0"
+  }
+}

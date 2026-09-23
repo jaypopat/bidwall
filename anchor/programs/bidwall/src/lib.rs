@@ -24,6 +24,24 @@ declare_id!("HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37");
 pub mod bidwall {
     use super::*;
 
+    pub fn create_kamino_market(ctx: Context<CreateKaminoMarket>, keeper: Pubkey) -> Result<()> {
+        instructions::kamino::register(ctx, keeper)
+    }
+    pub fn settle_kamino<'info>(
+        ctx: Context<'info, SettleKamino<'info>>,
+        max_repay: u64,
+        min_collateral: u64,
+        expected_remaining: u64,
+        expected_deposited_ctokens: u64,
+    ) -> Result<()> {
+        instructions::kamino::execute(
+            ctx,
+            max_repay,
+            min_collateral,
+            expected_remaining,
+            expected_deposited_ctokens,
+        )
+    }
     pub fn create_market(ctx: Context<CreateMarket>, keeper: Pubkey) -> Result<()> {
         instructions::create_market::handler(ctx, keeper)
     }

@@ -19,6 +19,9 @@ anchor-spl = { version = "=1.1.2", default-features = false, features = ["token"
 lender_harness = { path = "../lender_harness", features = ["cpi"] }
 [dev-dependencies]
 litesvm = "0.10.0"
+serde_json = "1"
+base64 = "0.22"
+flate2 = "1"
 solana-sdk = "3"
 [lints.rust]
 unexpected_cfgs = { level = "warn", check-cfg = ['cfg(target_os, values("solana"))'] }

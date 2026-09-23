@@ -437,3 +437,5 @@ mod lifecycle;
 mod rollback;
 mod settlement;
 mod substitution;
+
+mod kamino;
