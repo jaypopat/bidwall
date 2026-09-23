@@ -1,6 +1,6 @@
 # From verified settlement to a usable Bidwall demo
 
-Discussion draft · 23 September 2026
+Roadmap · updated 24 September 2026
 
 This document proposes the next implementation sequence. It records recommendations,
 not a decision to deploy or accept real funds. The [canonical brief](RWA-LIQUIDATION-DEPTH.md)
@@ -9,20 +9,14 @@ records what has actually passed.
 
 ## Where we stand
 
-The core technical question has a demonstrated answer: a funded Bidwall bid can
-participate in the selected Kamino liquidation flow, with repayment, collateral
-delivery, borrower surplus and capacity updates in one atomic transaction.
+Milestone 4 delivered generated bindings, a shared typed client and a one-command
+local demo that funds, settles, demonstrates rejected actions, expires and withdraws
+against captured real Kamino binaries. See [the operator demo](OPERATOR-DEMO.md)
+and [current component status](STATUS.md).
 
-| Area                          | Current evidence                                                   | Remaining gap                                                             |
-| ----------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------- |
-| Funded commitment lifecycle   | Creation, funding, activation, fills, expiry and withdrawal tested | Usable provider workflow                                                  |
-| Lender integration            | Real Kamino v2 binary exercised on a fork and offline replay       | Reusable client and operator transaction preparation                      |
-| Failure handling              | 46 workspace tests, including 17 Kamino tests                      | Explain failures and recovery to an operator                              |
-| Reproducibility               | Committed offline fixture; scripted fresh fork capture             | One-command demo reset, runtime startup and evidence export               |
-| Interface                     | Original SOL-vault starter remains                                 | Bidwall commitment and settlement screens                                 |
-| External liquidity comparison | Historical exploratory figures in the briefs                       | Reproducible quote observer for the same raw collateral quantity          |
-| Commercial premise            | Hypotheses in the briefs                                           | Actual provider terms and a named lender/operator use case                |
-| Production readiness          | Explicitly not claimed                                             | Independent review, operational controls and dependency/upgrade decisions |
+Step 1 below is substantially delivered for the offline demo. Live state fetching,
+opportunity discovery and interactive wallet operation remain. The next implementation
+is step 2: the functional console. The quote observer and external validation remain open.
 
 The money-flow test gate for starting a functional interface has been met. The
 next milestone should make the proven flow usable and inspectable while preserving

@@ -6,6 +6,9 @@ replays the real lender, farms and Token-2022 binaries against the current Bidwa
 build. **Not demonstrated:** a mainnet Bidwall deployment, production readiness,
 arbitrary Kamino markets, or an independently supplied market-maker bid.
 
+For the newer one-command offline lifecycle demo and shared client, see
+[OPERATOR-DEMO.md](OPERATOR-DEMO.md).
+
 The older [lender harness](LENDER-ADAPTER.md) and all of its lifecycle/adversarial
 checks remain. No frontend integration or polish is part of this milestone.
 
@@ -128,8 +131,8 @@ The new replay adds 17 tests (46 workspace tests total).
 
 For a fresh network-dependent fork run, follow the [fixture capture instructions](../anchor/programs/bidwall/fixtures/README.md).
 The script refuses non-loopback write endpoints. Ordinary runs save ignored evidence;
-only `CAPTURE_FIXTURE=1` replaces the checked-in replay. Inspect the new manifest and
-update it deliberately after a fixture change. Live obligations and deployed binaries
+only `CAPTURE_FIXTURE=1` replaces the checked-in replay. The capture regenerates its manifest from the fixture bytes and settlement event;
+review both together after a fixture change. Live obligations and deployed binaries
 can change, so a fresh capture can legitimately require new account selection.
 
 ## Toolchain and limits

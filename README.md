@@ -1,5 +1,8 @@
 # Bidwall
 
+Start with the [component status](docs/STATUS.md) or run the
+[one-command operator demo](docs/OPERATOR-DEMO.md): `npm run demo:kamino`.
+
 The funded-bid program is `anchor/programs/bidwall`. It settles through both the
 separate lender harness and the real Kamino v2 liquidation interface. The Kamino
 path is demonstrated on a local mainnet fork and a self-contained offline replay;
@@ -29,7 +32,7 @@ npx -y create-solana-dapp@latest -t solana-foundation/templates/kit/bidwall
 ```
 
 ```shell
-npm install
+pnpm install --frozen-lockfile --ignore-scripts
 npm run setup   # Builds the Anchor program and generates the TypeScript client
 npm run dev
 ```

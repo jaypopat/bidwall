@@ -26,8 +26,9 @@ CAPTURE_FIXTURE=1 node spikes/kamino-cpi/scenario.mjs
 
 Run offline: `npm run anchor-test`. Public live account discovery can change;
 fixture refresh may require selecting another single NVDAx/USDC obligation.
-Keep fixture changes reviewable by recording the new slot, binary hashes and
-result in the integration document.
+Capture regenerates `manifest.json` from the exact fixture bytes and settlement
+event. Keep fixture changes reviewable by recording the new slot, binary hashes
+and result in the integration document.
 
 Upstream software retains its own licenses (copies in `licenses/`). The Kamino
 binaries are used for non-production testing under their Business Source License;
