@@ -17,6 +17,7 @@ import {
 import { OraclePrices } from "@kamino-finance/scope-sdk/dist/@codegen/scope/accounts/OraclePrices.js";
 import { FARMS_PROGRAM_ADDRESS } from "@kamino-finance/farms-sdk";
 import { rpc, account } from "./rpc.mjs";
+import { fixtureManifest } from "../../scripts/kamino-fixture.mjs";
 const KLEND = "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
   BIDWALL = "HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37";
 const MARKET = "5wJeMrUYECGq41fxRESKALVcHnNX26TAWy4W98yULsua",
@@ -574,8 +575,11 @@ if (process.env.CAPTURE_FIXTURE === "1") {
     import.meta.url
   );
   mkdirSync(directory, { recursive: true });
+  const fixtureBytes = gzipSync(JSON.stringify(fixture));
+  const manifest = fixtureManifest(fixtureBytes);
+  writeFileSync(new URL("kamino.json.gz", directory), fixtureBytes);
   writeFileSync(
-    new URL("kamino.json.gz", directory),
-    gzipSync(JSON.stringify(fixture))
+    new URL("manifest.json", directory),
+    JSON.stringify(manifest, null, 2) + "\n"
   );
 }

@@ -130,3 +130,22 @@ test("failure explanations use program error names and preserve conservative rec
     /do not silently loosen/
   );
 });
+
+test("fixture capture manifest is derived from the recorded event and exact binary bytes", async () => {
+  const { fixtureManifest } = await import("../../scripts/kamino-fixture.mjs");
+  const bytes = readFileSync(
+    new URL(
+      "../../anchor/programs/bidwall/fixtures/kamino.json.gz",
+      import.meta.url
+    )
+  );
+  const manifest = JSON.parse(
+    readFileSync(
+      new URL(
+        "../../anchor/programs/bidwall/fixtures/manifest.json",
+        import.meta.url
+      )
+    )
+  );
+  assert.deepEqual(fixtureManifest(bytes), manifest);
+});

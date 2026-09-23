@@ -28,6 +28,7 @@ const runtime = await startRuntime();
 const { rpc, account } = runtime;
 const report = {
   environment: "local offline replay",
+  startedAt: new Date().toISOString(),
   rpc: runtime.url,
   fixtureSha256: manifest.fixtureSha256,
   upstreamSlot: manifest.coherentSnapshotSlot,
