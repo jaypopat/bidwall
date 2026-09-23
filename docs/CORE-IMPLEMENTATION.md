@@ -1,5 +1,6 @@
 # Bidwall core prototype
 
+> Milestone 3 adds a real Kamino fork/replay adapter; see [KAMINO-INTEGRATION.md](KAMINO-INTEGRATION.md).
 > Milestone 2 moved the embedded lender harness into a separate program settled via CPI.
 > See [LENDER-ADAPTER.md](LENDER-ADAPTER.md); it supersedes the trust-boundary and
 > settlement sections below. Lifecycle, terms, units and rounding are unchanged.

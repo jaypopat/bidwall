@@ -7,8 +7,10 @@ via CPI. It supersedes the "Program and trust boundary" and "Atomic settlement
 evidence" sections of [CORE-IMPLEMENTATION.md](CORE-IMPLEMENTATION.md). Lifecycle,
 terms, units and rounding are unchanged.
 
-**Production support claimed: none.** The lender is a local harness. No Kamino (or any
-other protocol) CPI, fork test or deployment has been demonstrated.
+**Historical milestone 2:** the remainder of this document describes the local
+harness and research at that point. Milestone 3 now demonstrates a real Kamino
+v2 CPI on a local mainnet fork and offline replay; see
+[KAMINO-INTEGRATION.md](KAMINO-INTEGRATION.md). Production support is still not claimed.
 
 ## Target lender research: Kamino klend
 
@@ -34,15 +36,14 @@ Source read: `Kamino-Finance/klend` at `a08760976f51a3a58c4a0c6ea27b4a0e565bca79
   `min_acceptable_received_liquidity_amount` (slippage).
 - There is no cash residual: the borrower keeps unseized collateral.
 
-Whether v2 can actually be invoked from an unlisted program was not tested. A CPI
-guard could exist outside the handler path read here, and v2 still needs the
-same-slot refresh instructions in the same transaction. Proving it needs a mainnet
-fork test (Surfpool) against the real NVDAx reserve. That test does not exist yet.
+At milestone 2, v2 CPI viability was untested. Milestone 3 now verifies the real
+NVDAx/USDC path with native refresh, farms and redemption. See the linked integration
+document for the exact supported scope and evidence.
 
 ## What was built instead
 
-The strongest integration that can be verified locally is an independently deployed
-lender with Kamino's interface shape, invoked across a real program boundary.
+Milestone 2 implemented an independently deployed lender with Kamino's interface
+shape, invoked across a real program boundary.
 
 `anchor/programs/lender_harness`, program `2JHZer7Zz7BKFTdHcnrvqAtPMf7zugw5rGbXT14cUw1N`:
 
@@ -132,9 +133,6 @@ identity (see `scripts/local-program-keys.mjs`). It must never be deployed.
   staleness check, interest, close factor, bonus, fee or permissioned liquidation exists.
 - **Borrower account.** A frozen or closed borrower USDC account blocks liquidation.
   This is a lender-rule choice that a real lender may handle differently.
-- **Kamino.** A real adapter needs Kamino's liquidation-with-redemption flow
-  (same-slot refresh instructions, farms and cToken redemption). Collateral would arrive
-  in liquidator-owned accounts, so Bidwall would have to forward it to the provider.
-  Terms are close-factor/bonus-based with no cash residual, so "fixed price per unit"
-  becomes "effective price ≤ bid price". The next step is a Surfpool fork test of v2
-  CPI viability against the NVDAx reserve.
+- **Kamino.** The real adapter and its fixed-price surplus allocation are now
+  demonstrated in [milestone 3](KAMINO-INTEGRATION.md). The harness above remains a
+  distinct synthetic lender, useful for lifecycle and malicious-program tests.

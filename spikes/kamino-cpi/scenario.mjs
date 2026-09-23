@@ -110,7 +110,7 @@ const forkSlot =
     (await rpc("getEpochInfo")).absoluteSlot
   ) + 1;
 await rpc("surfnet_timeTravel", [{ absoluteSlot: forkSlot }]);
-// Surfpool 1.5 reports absoluteSlot but writes slotIndex into Clock on timeTravel.
+// Surfpool 1.3.0 reports absoluteSlot but writes slotIndex into Clock on timeTravel.
 // Restore the absolute slot so LUT activation and lender refresh checks agree.
 const fixedClock = await account("SysvarC1ock11111111111111111111111111111111");
 fixedClock.data.writeBigUInt64LE(BigInt(forkSlot), 0);
@@ -420,6 +420,7 @@ async function transaction(label, instructions, expectedError = null) {
   );
   const tx = await kit.signTransactionMessageWithSigners(message),
     wire = kit.getBase64EncodedWireTransaction(tx);
+  assert(Buffer.from(wire, "base64").length <= 1232, "v0 packet size");
   const simulated = await rpc("simulateTransaction", [
     wire,
     { encoding: "base64", sigVerify: true },
@@ -480,7 +481,11 @@ await transaction(
 );
 await setPrice(true);
 const beforeSource = (await account(escrow)).data.readBigUInt64LE(64),
-  beforeDest = (await account(providerCollateral)).data.readBigUInt64LE(64);
+  beforeDest = (await account(providerCollateral)).data.readBigUInt64LE(64),
+  beforeRepay = (
+    await account(reserveU.liquidity.supplyVault)
+  ).data.readBigUInt64LE(64),
+  beforeBorrower = (await account(borrowerUsdc)).data.readBigUInt64LE(64);
 await transaction(
   "stressed NVDA150 CPI liquidation",
   [...refresh, settle],
@@ -490,8 +495,28 @@ const afterSource = (await account(escrow)).data.readBigUInt64LE(64),
   afterDest = (await account(providerCollateral)).data.readBigUInt64LE(64);
 assert(afterSource < beforeSource);
 assert(afterDest > beforeDest);
+const delivered = afterDest - beforeDest;
+const paid = beforeSource - afterSource;
+const repaid =
+  (await account(reserveU.liquidity.supplyVault)).data.readBigUInt64LE(64) -
+  beforeRepay;
+const residual =
+  (await account(borrowerUsdc)).data.readBigUInt64LE(64) - beforeBorrower;
+assert.equal(paid, (delivered * price) / 100_000_000n);
+assert.equal(paid, repaid + residual);
+assert(repaid > 0n && residual > 0n);
+const bidAfter = (await account(bid)).data;
+assert.equal(bidAfter.readBigUInt64LE(128), quantity - delivered);
+assert.equal(
+  bidAfter.readBigUInt64LE(136),
+  (quantity * price) / 100_000_000n - paid
+);
+for (const key of [source, ctoken, destination])
+  assert.equal((await account(key)).data.readBigUInt64LE(64), 0n);
 evidence.deltas = {
-  bidConsideration: (beforeSource - afterSource).toString(),
+  bidConsideration: paid.toString(),
+  debtRepaid: repaid.toString(),
+  borrowerSurplus: residual.toString(),
   nvdaReceived: (afterDest - beforeDest).toString(),
   obligationAfter: Obligation.decode((await account(OBLIGATION)).data).toJSON(),
 };

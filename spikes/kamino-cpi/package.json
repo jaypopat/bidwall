@@ -1,5 +1,5 @@
 {
-  "name": "kamino-cpi-spike",
+  "name": "bidwall-kamino-fork",
   "private": true,
   "type": "module",
   "scripts": {
@@ -7,6 +7,9 @@
   },
   "dependencies": {
     "@kamino-finance/klend-sdk": "12.0.0",
-    "@solana/kit": "^2.3.0"
+    "@solana/kit": "2.3.0",
+    "bn.js": "5.2.5",
+    "@kamino-finance/farms-sdk": "3.2.26",
+    "@kamino-finance/scope-sdk": "10.2.6"
   }
 }

@@ -1,11 +1,14 @@
 # Bidwall
 
-The funded-bid program is `anchor/programs/bidwall`. It settles through the separately
-deployed test lender `anchor/programs/lender_harness` via CPI. See the
-[lender-adapter boundary](docs/LENDER-ADAPTER.md), [core implementation](docs/CORE-IMPLEMENTATION.md)
-and the [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md).
-Run `npm run anchor-test` for SBF builds and adversarial tests, or
-`npm run demo:core` for the settlement/depletion scenario.
+The funded-bid program is `anchor/programs/bidwall`. It settles through both the
+separate lender harness and the real Kamino v2 liquidation interface. The Kamino
+path is demonstrated on a local mainnet fork and a self-contained offline replay;
+it is not a production deployment. See the [Kamino integration evidence](docs/KAMINO-INTEGRATION.md),
+[lender harness](docs/LENDER-ADAPTER.md), and [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md).
+
+Run `npm run anchor-test` for SBF builds and all 46 workspace tests,
+`npm run test:kamino` for the 17 real-lender replay tests, or
+`npm run demo:core` for the harness settlement/depletion scenario.
 
 The frontend below is still the original SOL-vault starter; it does not display or
 operate Bidwall commitments yet.
