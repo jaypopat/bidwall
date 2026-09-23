@@ -125,16 +125,20 @@ impl Fork {
         send(&mut self.svm, &self.keeper, &ix, &[])
     }
     fn rejects(&mut self, code: u32) -> Box<FailedTransactionMetadata> {
+        let error = self.rejects_any();
+        assert!(
+            format!("{:?}", error.err).contains(&format!("Custom({code})")),
+            "{error:?}"
+        );
+        error
+    }
+    fn rejects_any(&mut self) -> Box<FailedTransactionMetadata> {
         let before: Vec<_> = self
             .tracked
             .iter()
             .map(|k| (*k, self.svm.get_account(k)))
             .collect();
         let error = self.send().unwrap_err();
-        assert!(
-            format!("{:?}", error.err).contains(&format!("Custom({code})")),
-            "{error:?}"
-        );
         for (key, account) in before {
             assert_eq!(self.svm.get_account(&key), account, "rollback {key}");
         }
@@ -167,6 +171,15 @@ fn real_kamino_pays_debt_delivers_collateral_and_borrower_surplus() {
         assert_eq!(f.token(index), 0);
     }
     f.rejects(6004); // Newly signed replay with fresh blockhash also fails.
+    f.arg(0, after.remaining_funds);
+    f.arg(2, after.remaining_quantity);
+    f.rejects(6004); // Correcting bid capacity cannot replay the old loan quote.
+    let loan = f.svm.get_account(&f.key(17)).unwrap();
+    f.arg(
+        3,
+        u64::from_le_bytes(loan.data[128..136].try_into().unwrap()),
+    );
+    f.send().unwrap(); // A genuinely fresh partial-liquidation quote is allowed.
 }
 #[test]
 fn kamino_unauthorized_keeper() {
@@ -208,8 +221,7 @@ fn kamino_wrong_mints_and_recipients() {
                 a.data[..32].copy_from_slice(Pubkey::new_unique().as_ref())
             });
         }
-        let result = f.send();
-        assert!(result.is_err(), "index {index}");
+        f.rejects_any();
     }
 }
 #[test]
@@ -235,7 +247,7 @@ fn kamino_overfill_rolls_back_after_actual_lender_cpi() {
         .meta
         .logs
         .iter()
-        .any(|l| l.contains("Instruction: LiquidateObligationAndRedeemReserveCollateralV2")));
+        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
 }
 #[test]
 fn kamino_insufficient_fixed_price_rolls_back() {
@@ -252,7 +264,7 @@ fn kamino_frozen_delivery_rolls_back_lender_and_all_payments() {
         .meta
         .logs
         .iter()
-        .any(|l| l.contains("Program log: Instruction: TransferChecked")));
+        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
 }
 #[test]
 fn kamino_wrong_borrower_owner_rejected() {
@@ -275,4 +287,100 @@ fn kamino_expiry_and_inactive_bid() {
         });
         f.rejects(code);
     }
+}
+
+#[test]
+fn kamino_native_healthy_loan_and_stale_oracle() {
+    for healthy in [true, false] {
+        let mut f = Fork::new();
+        let key = pk("3t4JZcueEzTbVP6kLxXrL3VpWx45jDer4eqysweBchNH");
+        let mut a = f.svm.get_account(&key).unwrap();
+        for index in [332, 269] {
+            let offset = 40 + index * 56;
+            if healthy {
+                let exp = u64::from_le_bytes(a.data[offset + 8..offset + 16].try_into().unwrap());
+                a.data[offset..offset + 8]
+                    .copy_from_slice(&(225 * 10u64.pow(exp as u32)).to_le_bytes());
+            } else {
+                a.data[offset + 24..offset + 32].fill(0);
+            }
+        }
+        f.svm.set_account(key, a).unwrap();
+        let e = f.rejects_any();
+        assert!(
+            e.meta.logs.iter().any(|l| l.contains(if healthy {
+                "ObligationHealthy"
+            } else {
+                "PriceTooOld"
+            })),
+            "{e:?}"
+        );
+    }
+}
+#[test]
+fn kamino_native_refresh_required() {
+    let mut f = Fork::new();
+    f.instructions.drain(..3);
+    let e = f.rejects_any();
+    assert!(e.meta.logs.iter().any(|l| l.contains("Stale")), "{e:?}");
+}
+#[test]
+fn kamino_minimum_delivery_enforced_by_lender() {
+    let mut f = Fork::new();
+    f.arg(1, u64::MAX);
+    let e = f.rejects(6066);
+    assert!(
+        e.meta
+            .logs
+            .iter()
+            .any(|l| l.contains("LiquidationRewardTooSmall")),
+        "{e:?}"
+    );
+}
+#[test]
+fn kamino_obligation_owner_discriminator_and_length_are_checked() {
+    for change in 0..3 {
+        let mut f = Fork::new();
+        f.edit(17, |a| match change {
+            0 => a.owner = ID,
+            1 => a.data[0] ^= 1,
+            _ => a.data.truncate(2000),
+        });
+        // Native refresh may reject first; exercise the adapter parser directly.
+        f.instructions.drain(..3);
+        f.rejects(6000);
+    }
+}
+#[test]
+fn kamino_exact_capacity_exhaustion() {
+    let mut quote = Fork::new();
+    quote.send().unwrap();
+    let delivered = quote.token(10);
+    let mut f = Fork::new();
+    let budget = consideration(delivered, f.bid().price, 100_000_000).unwrap();
+    f.edit(2, |a| {
+        a.data[120..128].copy_from_slice(&delivered.to_le_bytes());
+        a.data[128..136].copy_from_slice(&delivered.to_le_bytes());
+        a.data[136..144].copy_from_slice(&budget.to_le_bytes());
+    });
+    f.edit(3, |a| a.data[64..72].copy_from_slice(&budget.to_le_bytes()));
+    f.arg(0, budget);
+    f.arg(2, delivered);
+    f.send().unwrap();
+    assert_eq!(f.bid().state, BidState::Exhausted);
+    assert_eq!(f.bid().remaining_quantity, 0);
+    assert_eq!(f.bid().remaining_funds, 0);
+    assert_eq!(f.token(3), 0);
+    f.rejects(6001);
+}
+#[test]
+fn kamino_borrower_payment_failure_rolls_back_completed_liquidation() {
+    let mut f = Fork::new();
+    f.edit(11, |a| a.data[108] = 2);
+    let e = f.rejects(17);
+    assert!(e
+        .meta
+        .logs
+        .iter()
+        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
 }

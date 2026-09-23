@@ -1,5 +1,5 @@
 #[cfg(test)]
-mod tests {
+mod lifecycle {
     use crate::ID as PROGRAM_ID;
     use anchor_lang::system_program;
     use litesvm::LiteSVM;

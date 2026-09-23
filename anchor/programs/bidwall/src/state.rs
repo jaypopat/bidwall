@@ -24,7 +24,7 @@ pub struct Bid {
     /// Lender program the bid may settle through, pinned at creation.
     pub adapter: Pubkey,
     pub id: u64,
-    /// USDC atoms per whole collateral token.
+    /// USDC atoms per 10^mint_decimals raw collateral atoms (before UI scaling).
     pub price: u64,
     /// Maximum collateral atoms.
     pub quantity: u64,

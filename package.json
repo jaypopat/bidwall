@@ -12,7 +12,8 @@
     "lint": "eslint",
     "setup": "npm run anchor-build && npm run codama:js",
     "start": "next start",
-    "demo:core": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall funded_partial_fill_depletion_and_residual_demo -- --nocapture"
+    "demo:core": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall funded_partial_fill_depletion_and_residual_demo -- --nocapture",
+    "test:kamino": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml -p bidwall tests::kamino"
   },
   "description": "Next.js, Tailwind, @solana/kit, Anchor vault program",
   "keywords": [
