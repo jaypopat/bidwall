@@ -341,6 +341,75 @@ h1 span {
   }
 }
 
+.scenario-section {
+  margin-top: 46px;
+}
+.scenario-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  padding: 1px;
+  margin: 0;
+  background: var(--line);
+  list-style: none;
+}
+.scenario-step {
+  position: relative;
+  min-height: 125px;
+  padding: 19px 20px;
+  background: var(--surface);
+}
+.scenario-step.is-complete::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--accent);
+}
+.scenario-step.is-pending {
+  background: #151e17;
+}
+.scenario-step-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--quiet);
+  font: 500 9px var(--mono);
+}
+.scenario-step-state.confirmed {
+  color: var(--accent);
+}
+.scenario-step-state.rejected-in-simulation {
+  color: #e1b68e;
+}
+.scenario-step-state.local-override {
+  color: #a7c6c8;
+}
+.scenario-step h3 {
+  margin-top: 24px;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+.scenario-step p {
+  margin-top: 5px;
+  color: var(--secondary);
+  font-size: 10px;
+  line-height: 1.45;
+}
+.scenario-step.is-pending h3,
+.scenario-step.is-pending p {
+  color: var(--quiet);
+}
+.scenario-note {
+  margin-top: 11px;
+  color: var(--quiet);
+  font-size: 10px;
+  line-height: 1.5;
+}
+
 .section {
   margin-top: 62px;
 }
@@ -804,6 +873,9 @@ h1 span {
 }
 
 @media (max-width: 850px) {
+  .scenario-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .page-intro {
     align-items: start;
     flex-direction: column;
@@ -836,6 +908,12 @@ h1 span {
   }
 }
 @media (max-width: 600px) {
+  .scenario-grid {
+    grid-template-columns: 1fr;
+  }
+  .scenario-step {
+    min-height: 108px;
+  }
   .header-inner,
   .main,
   .footer {

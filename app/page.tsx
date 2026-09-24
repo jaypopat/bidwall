@@ -1,7 +1,56 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import type { DemoReceipt, DemoResponse, DemoStep } from "./lib/demo/types";
+import type {
+  DemoReceipt,
+  DemoResponse,
+  DemoStage,
+  DemoStep,
+} from "./lib/demo/types";
+
+const SCENARIO: {
+  id: DemoStage["id"];
+  title: string;
+  pending: string;
+  complete: string;
+}[] = [
+  {
+    id: "funded",
+    title: "Fund bid",
+    pending: "Create and activate a funded bid.",
+    complete: "USDC escrowed and bid activated.",
+  },
+  {
+    id: "locked",
+    title: "Test the lock",
+    pending: "Try to withdraw before expiry.",
+    complete: "Early withdrawal rejected in simulation.",
+  },
+  {
+    id: "healthy",
+    title: "Check eligibility",
+    pending: "Attempt a healthy-loan liquidation.",
+    complete: "Healthy loan rejected in simulation.",
+  },
+  {
+    id: "stressed",
+    title: "Stress locally",
+    pending: "Apply a local Scope price override.",
+    complete: "Scope price changed from 225 to 150 locally.",
+  },
+  {
+    id: "settled",
+    title: "Settle atomically",
+    pending: "Execute an eligible liquidation.",
+    complete: "Debt, collateral and surplus verified.",
+  },
+  {
+    id: "withdrawn",
+    title: "Expire and return",
+    pending: "Withdraw the remainder after expiry.",
+    complete: "Unused escrow returned after expiry.",
+  },
+];
 
 function usd(atoms?: string) {
   if (!atoms) return "—";
@@ -145,6 +194,9 @@ export default function Home() {
   };
 
   const receipt: DemoReceipt | null = data?.receipt ?? null;
+  const completedStages = new Map(
+    receipt?.stages.map((stage) => [stage.id, stage.mode])
+  );
   const settlement = receipt?.settlement;
   const steps = receipt?.steps ?? [];
   const confirmed = steps.filter((step) => step.status === "confirmed").length;
@@ -160,7 +212,9 @@ export default function Home() {
       ? "Verified replay"
       : receipt?.status === "failed"
         ? "Failed replay"
-        : "Awaiting run";
+        : receipt?.status === "running"
+          ? "Incomplete run"
+          : "Awaiting run";
 
   return (
     <div className="app">
@@ -250,6 +304,53 @@ export default function Home() {
             <span>{data.output.at(-1) ?? "Preparing isolated runtime…"}</span>
           </div>
         )}
+
+        <section
+          className="section scenario-section"
+          aria-labelledby="scenario-title"
+        >
+          <div className="section-title">
+            <div>
+              <span className="section-index">SCENARIO</span>
+              <h2 id="scenario-title">The proof, in order</h2>
+            </div>
+            <p>
+              {receipt?.status === "passed" && !receipt.stages.length
+                ? "This older receipt predates staged evidence. Run a new scenario to see it."
+                : "Completed checks appear as the offline run progresses. Local overrides are labeled separately."}
+            </p>
+          </div>
+          <ol className="scenario-grid">
+            {SCENARIO.map((item, index) => {
+              const mode = completedStages.get(item.id);
+              return (
+                <li
+                  className={`scenario-step ${mode ? "is-complete" : "is-pending"}`}
+                  key={item.id}
+                >
+                  <div className="scenario-step-head">
+                    <span>{String(index + 1).padStart(2, "0")}</span>
+                    <span className={`scenario-step-state ${mode ?? ""}`}>
+                      {mode === "confirmed"
+                        ? "Confirmed"
+                        : mode === "rejected-in-simulation"
+                          ? "Rejected in simulation"
+                          : mode === "local-override"
+                            ? "Local override"
+                            : "Waiting"}
+                    </span>
+                  </div>
+                  <h3>{item.title}</h3>
+                  <p>{mode ? item.complete : item.pending}</p>
+                </li>
+              );
+            })}
+          </ol>
+          <p className="scenario-note">
+            Replay and insufficient-capacity checks appear in the execution
+            record below. Simulated rejections did not submit transactions.
+          </p>
+        </section>
 
         <section className="section" id="commitment">
           <div className="section-title">

@@ -7,13 +7,19 @@ export type DemoStep = {
   reason?: string;
 };
 
+export type DemoStage = {
+  id: "funded" | "locked" | "healthy" | "stressed" | "settled" | "withdrawn";
+  mode: "confirmed" | "rejected-in-simulation" | "local-override";
+};
+
 export type DemoReceipt = {
-  status: "passed" | "failed";
+  status: "running" | "passed" | "failed";
   startedAt: string;
   upstreamSlot: number;
   fixtureSha256: string;
   bidwallSha256?: string;
   steps: DemoStep[];
+  stages: DemoStage[];
   settlement?: {
     bid: string;
     obligation: string;

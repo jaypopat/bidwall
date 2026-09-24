@@ -2,7 +2,7 @@ import "server-only";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { DemoReceipt, DemoResponse, DemoStep } from "./types";
+import type { DemoReceipt, DemoResponse, DemoStage, DemoStep } from "./types";
 
 const receiptPath = resolve(process.cwd(), "build/demo/receipt.json");
 const localNames = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -85,7 +85,9 @@ async function readReceipt(): Promise<DemoReceipt | null> {
   try {
     const raw = JSON.parse(await readFile(receiptPath, "utf8"));
     if (
-      (raw.status !== "passed" && raw.status !== "failed") ||
+      (raw.status !== "running" &&
+        raw.status !== "passed" &&
+        raw.status !== "failed") ||
       typeof raw.startedAt !== "string" ||
       !Number.isFinite(Date.parse(raw.startedAt)) ||
       !Number.isInteger(raw.upstreamSlot) ||
@@ -94,8 +96,8 @@ async function readReceipt(): Promise<DemoReceipt | null> {
     )
       return null;
     const settlement = readSettlement(raw.settlement);
-    if (raw.status === "passed") {
-      if (!settlement) return null;
+    if (raw.status === "passed" && !settlement) return null;
+    if (settlement) {
       if (
         BigInt(settlement.paidUsdcAtoms) !==
           BigInt(settlement.repaidUsdcAtoms) +
@@ -136,6 +138,30 @@ async function readReceipt(): Promise<DemoReceipt | null> {
               : undefined,
         };
       });
+    const stageModes: Record<DemoStage["id"], DemoStage["mode"]> = {
+      funded: "confirmed",
+      locked: "rejected-in-simulation",
+      healthy: "rejected-in-simulation",
+      stressed: "local-override",
+      settled: "confirmed",
+      withdrawn: "confirmed",
+    };
+    const stageOrder = Object.keys(stageModes) as DemoStage["id"][];
+    const rawStages: unknown[] = Array.isArray(raw.stages) ? raw.stages : [];
+    if (rawStages.length > stageOrder.length) return null;
+    const stages: DemoStage[] = rawStages.map((value, index) => {
+      const stage = value as Record<string, unknown>;
+      const id = stageOrder[index];
+      if (!stage || stage.id !== id || stage.mode !== stageModes[id])
+        throw new Error("Invalid scenario stage order");
+      return { id, mode: stageModes[id] };
+    });
+    if (
+      raw.status === "passed" &&
+      stages.length > 0 &&
+      stages.length !== stageOrder.length
+    )
+      return null;
     const capacity = raw.capacityFailure;
     return {
       status: raw.status,
@@ -145,6 +171,7 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       bidwallSha256:
         typeof raw.bidwallSha256 === "string" ? raw.bidwallSha256 : undefined,
       steps,
+      stages,
       settlement,
       capacityFailure:
         isAtoms(capacity?.requestedRepay) && isAtoms(capacity?.availableFunds)

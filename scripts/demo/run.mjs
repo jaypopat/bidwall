@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, renameSync, writeFileSync } from "node:fs";
 import { gunzipSync } from "node:zlib";
 import { createHash } from "node:crypto";
 import { createRequire } from "node:module";
@@ -32,6 +32,8 @@ const report = {
   rpc: runtime.url,
   fixtureSha256: manifest.fixtureSha256,
   upstreamSlot: manifest.coherentSnapshotSlot,
+  status: "running",
+  stages: [],
   transactions: [],
   seedOverrides: [
     "Captured Kamino/Scope state and deployed binaries",
@@ -40,16 +42,23 @@ const report = {
   ],
   programs: manifest.programElfSha256,
 };
-const save = () =>
+const save = () => {
   writeFileSync(
-    "build/demo/receipt.json",
+    "build/demo/receipt.json.tmp",
     JSON.stringify(
       report,
       (_key, value) => (typeof value === "bigint" ? value.toString() : value),
       2
     ) + "\n"
   );
+  renameSync("build/demo/receipt.json.tmp", "build/demo/receipt.json");
+};
+const markStage = (id, mode) => {
+  report.stages.push({ id, mode });
+  save();
+};
 try {
+  save();
   await rpc("surfnet_pauseClock");
   const recorded = fixture.instructions.at(-1).accounts;
   const skip = new Set([3, 7, 8, 9, 10, 11].map((i) => recorded[i].key));
@@ -152,6 +161,14 @@ try {
     const a = await account(plan.bid);
     return client.decodeBid(a.data, kit.address(a.owner));
   };
+  const fundedBid = await readBid();
+  assert.equal(fundedBid.state, generated.BidState.Active);
+  assert.equal(fundedBid.remainingFunds, plan.budget);
+  assert.equal(
+    (await account(plan.escrow)).data.readBigUInt64LE(64),
+    plan.budget
+  );
+  markStage("funded", "confirmed");
   const obligationAddress = kit.address(recorded[17].key);
   const loanAccount = await account(obligationAddress),
     loan = client.readObligation(
@@ -199,6 +216,7 @@ try {
   await transact("early withdrawal", [plan.withdraw], {
     expectedError: { InstructionError: [1, { Custom: 6002 }] },
   });
+  markStage("locked", "rejected-in-simulation");
   const originalOracle = await account(client.KAMINO.scope);
   const setPrice = async (healthy) => {
     const data = Buffer.from(originalOracle.data);
@@ -224,7 +242,18 @@ try {
   await transact("healthy loan liquidation", settlement.instructions, {
     expectedError: { InstructionError: [4, { Custom: 6016 }] },
   });
+  markStage("healthy", "rejected-in-simulation");
   await setPrice(false);
+  const stressedOracle = (await account(client.KAMINO.scope)).data;
+  for (const i of [332, 269]) {
+    const offset = 40 + i * 56;
+    assert.equal(
+      stressedOracle.readBigUInt64LE(offset) /
+        10n ** stressedOracle.readBigUInt64LE(offset + 8),
+      150n
+    );
+  }
+  markStage("stressed", "local-override");
   const watched = [
     plan.escrow,
     client.KAMINO.repaySupply,
@@ -279,6 +308,7 @@ try {
     remainingQuantity: bidAfter.remainingQuantity,
     remainingFunds: bidAfter.remainingFunds,
   };
+  markStage("settled", "confirmed");
   console.log(
     `SETTLED: ${client.formatAtoms(repaid, 6)} USDC repaid; ${received} raw NVDAx atoms delivered; ${client.formatAtoms(residual, 6)} USDC borrower surplus`
   );
@@ -305,6 +335,7 @@ try {
     availableFunds: bidAfter.remainingFunds,
     status: "rejected-before-signing",
   };
+  save();
   const expiryClock = (
     await account("SysvarC1ock11111111111111111111111111111111")
   ).data;
@@ -324,6 +355,7 @@ try {
     bidAfter.remainingFunds
   );
   assert.equal((await readBid()).state, generated.BidState.Withdrawn);
+  markStage("withdrawn", "confirmed");
   report.status = "passed";
   save();
   console.log("PASS — receipt saved to build/demo/receipt.json");
