@@ -7,6 +7,7 @@
     "ci": "npm run build && npm run lint && npm run format:check",
     "codama:js": "codama run js && codama -c codama.bidwall.json run js",
     "dev": "next dev",
+    "dev:demo": "BIDWALL_LOCAL_DEMO=1 next dev --hostname 127.0.0.1",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "lint": "eslint",

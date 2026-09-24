@@ -93,7 +93,15 @@ export function VaultCard() {
       console.error("Deposit failed:", err);
       toast.error(parseTransactionError(err));
     }
-  }, [walletAddress, vaultAddress, amount, signer, send, getExplorerUrl]);
+  }, [
+    walletAddress,
+    vaultAddress,
+    amount,
+    signer,
+    send,
+    getExplorerUrl,
+    walletLamports,
+  ]);
 
   const handleWithdraw = useCallback(async () => {
     if (!walletAddress || !vaultAddress || !signer) return;
