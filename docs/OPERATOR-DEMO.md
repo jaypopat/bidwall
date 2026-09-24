@@ -19,6 +19,8 @@ For the browser console, run `npm run dev:demo` and open
 <http://127.0.0.1:3000>. The Run local scenario button executes this same
 command and renders its verified receipt. See [frontend scope](FRONTEND.md): the
 page is a scripted local launcher and receipt viewer, not wallet-driven bidding.
+Its stage cards advance during the run and distinguish confirmed transactions,
+simulation rejections and the local oracle override.
 
 `npm run` executes scripts only; dependency installation uses pnpm and its committed
 lockfile. The obsolete starter Bun lockfile was removed. The optional resolver
