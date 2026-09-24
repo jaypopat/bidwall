@@ -5,54 +5,92 @@ import type { DemoReceipt, DemoResponse, DemoStep } from "./lib/demo/types";
 
 function usd(atoms?: string) {
   if (!atoms) return "—";
-  const n = BigInt(atoms);
-  return `${(n / 1_000_000n).toLocaleString("en-US")}.${(n % 1_000_000n).toString().padStart(6, "0")}`;
+  const value = BigInt(atoms);
+  return `${(value / 1_000_000n).toLocaleString("en-US")}.${(value % 1_000_000n).toString().padStart(6, "0")}`;
 }
-const count = (atoms?: string) =>
-  atoms ? BigInt(atoms).toLocaleString("en-US") : "—";
-const short = (address?: string) =>
-  address ? `${address.slice(0, 6)}…${address.slice(-6)}` : "—";
-const moment = (iso?: string) =>
-  iso
-    ? new Date(iso).toLocaleString("en-GB", {
-        dateStyle: "medium",
-        timeStyle: "short",
+
+function integer(atoms?: string) {
+  return atoms ? BigInt(atoms).toLocaleString("en-US") : "—";
+}
+
+function short(value?: string) {
+  return value ? `${value.slice(0, 6)}…${value.slice(-6)}` : "—";
+}
+
+function timestamp(value?: string) {
+  return value
+    ? new Date(value).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
         timeZone: "UTC",
       }) + " UTC"
     : "—";
+}
+
+function Metric({
+  label,
+  value,
+  unit,
+  note,
+}: {
+  label: string;
+  value: string;
+  unit?: string;
+  note?: string;
+}) {
+  return (
+    <div className="metric">
+      <span className="metric-label">{label}</span>
+      <div className="metric-value">
+        {value}
+        {unit && <span>{unit}</span>}
+      </div>
+      {note && <p>{note}</p>}
+    </div>
+  );
+}
 
 function StepDetails({ step }: { step: DemoStep }) {
   return (
     <div className="step-details">
       <p>
         {step.status === "confirmed"
-          ? "Confirmed on the local runtime"
-          : "Rejected in simulation · no transaction submitted"}
+          ? "Confirmed on the isolated local runtime."
+          : "Rejected in simulation. No transaction submitted."}
       </p>
       {step.reason && <p className="step-reason">{step.reason}</p>}
-      {step.signature && (
-        <div className="detail-pair">
-          <span>Signature</span>
-          <button
-            title="Copy signature"
-            onClick={() => void navigator.clipboard.writeText(step.signature!)}
-          >
-            {short(step.signature)} ↗
-          </button>
-        </div>
-      )}
-      {step.slot && (
-        <div className="detail-pair">
-          <span>Local slot</span>
-          <strong>{step.slot.toLocaleString("en-US")}</strong>
-        </div>
-      )}
-      {step.unitsConsumed && (
-        <div className="detail-pair">
-          <span>Compute units</span>
-          <strong>{step.unitsConsumed.toLocaleString("en-US")}</strong>
-        </div>
-      )}
+      <dl>
+        {step.signature && (
+          <div>
+            <dt>Signature</dt>
+            <dd>
+              <button
+                title="Copy signature"
+                onClick={() =>
+                  void navigator.clipboard.writeText(step.signature!)
+                }
+              >
+                {short(step.signature)} <span aria-hidden="true">↗</span>
+              </button>
+            </dd>
+          </div>
+        )}
+        {step.slot && (
+          <div>
+            <dt>Local slot</dt>
+            <dd>{step.slot.toLocaleString("en-US")}</dd>
+          </div>
+        )}
+        {step.unitsConsumed && (
+          <div>
+            <dt>Compute units</dt>
+            <dd>{step.unitsConsumed.toLocaleString("en-US")}</dd>
+          </div>
+        )}
+      </dl>
     </div>
   );
 }
@@ -61,7 +99,8 @@ export default function Home() {
   const [data, setData] = useState<DemoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string>();
-  const [selected, setSelected] = useState<number | null>(null);
+  const [selectedStep, setSelectedStep] = useState<number | null>(null);
+
   const refresh = useCallback(async () => {
     try {
       const response = await fetch("/api/demo", { cache: "no-store" });
@@ -78,6 +117,7 @@ export default function Home() {
       setLoading(false);
     }
   }, []);
+
   useEffect(() => {
     const initial = window.setTimeout(() => void refresh(), 0);
     const timer = window.setInterval(() => void refresh(), 2000);
@@ -86,6 +126,7 @@ export default function Home() {
       window.clearInterval(timer);
     };
   }, [refresh]);
+
   const run = async () => {
     setRequestError(undefined);
     try {
@@ -96,419 +137,318 @@ export default function Home() {
           body.error ?? `Could not start demo (${response.status})`
         );
       }
-      setSelected(null);
+      setSelectedStep(null);
       setData((await response.json()) as DemoResponse);
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : String(error));
     }
   };
+
   const receipt: DemoReceipt | null = data?.receipt ?? null;
   const settlement = receipt?.settlement;
+  const steps = receipt?.steps ?? [];
+  const confirmed = steps.filter((step) => step.status === "confirmed").length;
+  const rejected =
+    steps.filter((step) => step.status === "rejected-in-simulation").length +
+    (receipt?.capacityFailure ? 1 : 0);
   const usedPercent = Number(
     (BigInt(settlement?.paidUsdcAtoms ?? "0") * 100n) / 1_500_000_000n
   );
-  const steps = receipt?.steps ?? [];
-  const confirmed = steps.filter((s) => s.status === "confirmed").length;
-  const rejected =
-    steps.filter((s) => s.status === "rejected-in-simulation").length +
-    (receipt?.capacityFailure ? 1 : 0);
+  const status = data?.running
+    ? "Running"
+    : receipt?.status === "passed"
+      ? "Verified replay"
+      : receipt?.status === "failed"
+        ? "Failed replay"
+        : "Awaiting run";
 
   return (
-    <div className="shell">
-      <header className="topbar">
-        <a className="brand" href="#top" aria-label="Bidwall home">
-          <span className="brand-mark">
-            <i />
-            <i />
-            <i />
-          </span>
-          bidwall<span className="brand-period">.</span>
-        </a>
-        <nav className="topnav" aria-label="Sections">
-          <a href="#commitment">Commitment</a>
-          <a href="#settlement">Settlement</a>
-          <a href="#evidence">Evidence</a>
-        </nav>
-        <div className="environment">
-          <span className="environment-dot" /> LOCAL REPLAY{" "}
-          <span className="environment-divider" /> NVDAx / USDC
+    <div className="app">
+      <header className="site-header">
+        <div className="header-inner">
+          <a href="#top" className="wordmark" aria-label="Bidwall home">
+            <span className="wordmark-icon">
+              <i />
+              <i />
+              <i />
+            </span>
+            bidwall<span className="wordmark-dot">.</span>
+          </a>
+          <div className="header-right">
+            <span className="header-product">Operator console</span>
+            <span className="env-badge">
+              <span /> LOCAL / OFFLINE
+            </span>
+          </div>
         </div>
       </header>
-      <main id="top">
-        <section className="hero">
-          <div className="hero-copy">
-            <div className="eyebrow">
-              <span>01 / OPERATOR CONSOLE</span>
-              <span>FUNDED LIQUIDATION CAPACITY</span>
-            </div>
-            <h1>
-              Liquidity that
-              <br />
-              <em>stays put.</em>
-            </h1>
-            <p className="hero-lede">
-              A funded buyer, committed before the liquidation. Inspect the
-              lock, execute the eligible route, and trace every atom of
-              settlement.
-            </p>
-            <div className="hero-actions">
-              <button
-                className="primary-button"
-                disabled={loading || !data?.enabled || data.running}
-                onClick={() => void run()}
-              >
-                {data?.running
-                  ? "Running local scenario"
-                  : receipt
-                    ? "Run fresh scenario"
-                    : "Run local scenario"}{" "}
-                <span aria-hidden="true">↗</span>
-              </button>
-              <a className="text-link" href="#evidence">
-                Explore the proof ↗
-              </a>
-            </div>
-            <p className="hero-caption">
-              {data?.enabled
-                ? "Fresh offline Surfpool runtime · ephemeral test funds · no personal wallet or public RPC."
-                : "Run npm run dev:demo locally to enable execution. No public trading endpoint."}
-            </p>
-          </div>
-          <div className="hero-art" aria-hidden="true">
-            <div className="hero-art-grid" />
-            <div className="orbit orbit-one" />
-            <div className="orbit orbit-two" />
-            <div className="orbit orbit-three" />
-            <div className="hero-art-core">
-              <span>B</span>
-              <small>
-                FUNDED
-                <br />
-                BY DESIGN
-              </small>
-            </div>
-            <div className="hero-art-label art-label-one">CAPITAL / LOCKED</div>
-            <div className="hero-art-label art-label-two">ROUTE / VERIFIED</div>
-            <div className="hero-art-label art-label-three">
-              SETTLEMENT / ATOMIC
-            </div>
-            <div className="hero-art-corner">
-              BW—001
-              <br />
-              SOLANA / LOCAL
-            </div>
-          </div>
-        </section>
-        <section className="trust-strip" aria-label="Mechanism">
-          <div>
-            <span className="strip-index">01</span>
-            <strong>Funded upfront</strong>
-            <span>USDC escrowed before activation</span>
-          </div>
-          <div>
-            <span className="strip-index">02</span>
-            <strong>Term-bound</strong>
-            <span>No early cancellation or repricing</span>
-          </div>
-          <div>
-            <span className="strip-index">03</span>
-            <strong>Atomic delivery</strong>
-            <span>Collateral reaches the provider</span>
-          </div>
-        </section>
 
-        <section className="section commitment" id="commitment">
-          <div className="section-heading">
+      <main className="main" id="top">
+        <div className="page-intro">
+          <div>
+            <p className="overline">KAMINO V2 · NVDAx / USDC</p>
+            <h1>Liquidation backstop</h1>
+            <p className="intro-copy">
+              A fixed, fully funded bid for one named lending market. Run the
+              local scenario and inspect what actually settled.
+            </p>
+          </div>
+          <div className="intro-action">
+            <button
+              className="run-button"
+              disabled={loading || !data?.enabled || data.running}
+              onClick={() => void run()}
+            >
+              {data?.running
+                ? "Running scenario…"
+                : receipt
+                  ? "Run new scenario"
+                  : "Run local scenario"}
+              <span aria-hidden="true">↗</span>
+            </button>
+            <span>
+              {data?.enabled
+                ? "Fresh runtime · test funds only"
+                : "Start with npm run dev:demo"}
+            </span>
+          </div>
+        </div>
+
+        <div className="status-line" role="status">
+          <span
+            className={`status-indicator ${receipt?.status === "passed" ? "passed" : data?.running ? "running" : ""}`}
+          />
+          <strong>{status}</strong>
+          <span className="status-separator" />
+          <span>
+            {receipt ? timestamp(receipt.startedAt) : "No local receipt yet"}
+          </span>
+          <span className="status-right">
+            Captured mainnet state · local execution
+          </span>
+        </div>
+
+        {(requestError || data?.error || receipt?.error) && (
+          <div className="error-bar" role="alert">
+            {requestError || data?.error || receipt?.error}
+          </div>
+        )}
+        {data?.running && (
+          <div className="progress-bar" role="status">
+            <span className="progress-spinner" />
+            <span>{data.output.at(-1) ?? "Preparing isolated runtime…"}</span>
+          </div>
+        )}
+
+        <section className="section" id="commitment">
+          <div className="section-title">
             <div>
-              <span className="kicker">THE COMMITMENT</span>
-              <h2>Capital with a condition.</h2>
+              <span className="section-index">01 / COMMITMENT</span>
+              <h2>Fixed bid</h2>
             </div>
             <p>
-              One named market. One fixed price. A visible end to the
-              obligation.
+              Terms are fixed by the local demo; this is a receipt viewer, not a
+              live order form.
             </p>
           </div>
-          <div className="commitment-grid">
-            <article className="commitment-card">
-              <div className="card-topline">
-                <span className="card-kicker">01 — FIXED BID</span>
-                <span className="card-status">
-                  <span />{" "}
-                  {receipt?.status === "passed"
-                    ? "REPLAY COMPLETE"
-                    : "LOCAL SCENARIO"}
-                </span>
-              </div>
-              <div className="pair-title">
+          <div className="bid-panel">
+            <div className="bid-overview">
+              <span className="field-label">MARKET</span>
+              <h3>
                 NVDAx <span>/</span> USDC
-              </div>
-              <p className="asset-description">
-                Public Kamino v2 xStocks market · captured real program binaries
-                · locally controlled oracle scenario
-              </p>
-              <div className="hairline" />
-              <div className="bid-metrics">
+              </h3>
+              <p>Kamino v2 · xStocks market</p>
+              <div className="bid-terms">
                 <div>
-                  <span>Purchase price</span>
-                  <strong>
-                    150.00 <small>USDC</small>
-                  </strong>
-                  <p>per 100,000,000 raw NVDAx atoms</p>
+                  <span>Fixed price</span>
+                  <strong>150 USDC</strong>
+                  <small>per 100,000,000 raw NVDAx atoms</small>
                 </div>
                 <div>
-                  <span>Initial escrow</span>
-                  <strong>
-                    1,500.00 <small>USDC</small>
-                  </strong>
-                  <p>fully funded before activation</p>
+                  <span>Maximum quantity</span>
+                  <strong>1,000,000,000</strong>
+                  <small>raw NVDAx atoms</small>
                 </div>
               </div>
-              <div className="card-foot">
-                <span>MAX QUANTITY</span>
-                <strong>1,000,000,000 raw atoms</strong>
+            </div>
+            <div className="bid-capacity">
+              <div className="capacity-top">
+                <span className="field-label">FUNDED CAPITAL</span>
+                <span className="funded-chip">FUNDED UPFRONT</span>
               </div>
-            </article>
-            <article className="capacity-card">
-              <div className="card-topline">
-                <span className="card-kicker">02 — CAPACITY AT SETTLEMENT</span>
-                <span className="tiny-marker">RAW UNITS</span>
-              </div>
-              <div className="capacity-lead">
-                <span>Used by liquidation</span>
-                <strong>
-                  {usd(settlement?.paidUsdcAtoms)}
-                  <small> USDC</small>
-                </strong>
+              <div className="capital-number">
+                1,500.000000 <span>USDC</span>
               </div>
               <div
-                className="capacity-bar"
+                className="capacity-track"
                 role="img"
                 aria-label={
                   settlement
-                    ? `${usedPercent}% of initial escrow used at settlement`
-                    : "No settlement receipt yet"
+                    ? `${usedPercent}% of original escrow spent in the liquidation`
+                    : "Settlement has not run"
                 }
               >
                 <span style={{ width: `${usedPercent}%` }} />
               </div>
-              <div className="capacity-scale">
-                <span>0</span>
-                <span>1,500 USDC escrow</span>
+              <div className="capacity-key">
+                <span>
+                  <i className="key-used" /> Used at settlement{" "}
+                  {usd(settlement?.paidUsdcAtoms)} USDC
+                </span>
+                <span>
+                  <i className="key-remaining" /> Remaining{" "}
+                  {usd(settlement?.remainingFunds)} USDC
+                </span>
               </div>
-              <div className="capacity-row">
-                <div>
-                  <span>Remaining at settlement</span>
-                  <strong>
-                    {usd(settlement?.remainingFunds)} <small>USDC</small>
-                  </strong>
-                </div>
-                <div>
-                  <span>Remaining quantity</span>
-                  <strong>
-                    {count(settlement?.remainingQuantity)} <small>atoms</small>
-                  </strong>
-                </div>
-              </div>
-              <p className="capacity-note">
-                {receipt?.status === "passed"
-                  ? "The remaining USDC was withdrawn only after scenario expiry. This card shows capacity immediately after the fill."
-                  : "Capacity appears after a completed local run. Unused funds are withdrawn after scenario expiry."}
+              <p className="capacity-footnote">
+                Remaining funds were withdrawn only after scenario expiry.
+                Values above are captured immediately after the liquidation.
               </p>
-            </article>
+            </div>
           </div>
         </section>
 
-        <section className="section mechanism">
-          <div className="section-heading">
+        <section className="section" id="settlement">
+          <div className="section-title">
             <div>
-              <span className="kicker">HOW IT CLOSES</span>
-              <h2>Four steps. One promise.</h2>
+              <span className="section-index">02 / SETTLEMENT</span>
+              <h2>Money flow</h2>
             </div>
-            <p>
-              The payment and collateral legs must complete together or the
-              transaction rolls back.
-            </p>
+            <p>Measured balance changes from the isolated transaction.</p>
           </div>
-          <div className="flow-grid">
-            {[
-              ["01", "Commit", "Capital is escrowed at a fixed price."],
-              ["02", "Qualify", "Lender eligibility is checked."],
-              ["03", "Settle", "Debt and collateral move atomically."],
-              ["04", "Release", "Unused funds unlock after expiry."],
-            ].map(([number, name, detail]) => (
-              <div className="flow-step" key={number}>
-                <span className="flow-number">{number}</span>
-                <div className="flow-symbol">
-                  {number === "01" ? "↘" : number === "04" ? "↗" : "→"}
-                </div>
-                <h3>{name}</h3>
-                <p>{detail}</p>
+          <div className="settlement-panel">
+            <div className="settlement-summary">
+              <div className="summary-head">
+                <span className="field-label">ATOMIC SETTLEMENT</span>
+                <span className={`result-chip ${settlement ? "settled" : ""}`}>
+                  {settlement ? "VERIFIED LOCALLY" : "AWAITING RUN"}
+                </span>
               </div>
-            ))}
-          </div>
-        </section>
-
-        <section className="settlement-panel" id="settlement">
-          <div className="settlement-head">
-            <div>
-              <span className="kicker">THE SETTLEMENT</span>
-              <h2>Follow the money.</h2>
-              <p>
-                Observed balance changes from the local transaction. Figures are
-                raw on-chain accounting, not estimated proceeds.
+              <Metric
+                label="Purchase consideration"
+                value={usd(settlement?.paidUsdcAtoms)}
+                unit="USDC"
+                note="Debited from the bid escrow"
+              />
+              <div className="identity-lines">
+                <div>
+                  <span>Debt repaid to lender</span>
+                  <strong>{usd(settlement?.repaidUsdcAtoms)} USDC</strong>
+                </div>
+                <div>
+                  <span>Borrower residual</span>
+                  <strong>{usd(settlement?.borrowerUsdcAtoms)} USDC</strong>
+                </div>
+              </div>
+              <p className="identity-note">
+                Purchase consideration = lender repayment + borrower residual
               </p>
             </div>
-            <span className={`outcome-pill ${settlement ? "positive" : ""}`}>
-              {settlement ? "● VERIFIED LOCALLY" : "○ AWAITING RUN"}
-            </span>
-          </div>
-          <div className="money-grid">
-            {[
-              [
-                "01 / ESCROW",
-                "Purchase consideration",
-                usd(settlement?.paidUsdcAtoms),
-                "USDC",
-                "Debited from the funded bid",
-              ],
-              [
-                "02 / LENDER",
-                "Debt repaid",
-                usd(settlement?.repaidUsdcAtoms),
-                "USDC",
-                "Delivered to Kamino repay reserve",
-              ],
-              [
-                "03 / BORROWER",
-                "Residual paid",
-                usd(settlement?.borrowerUsdcAtoms),
-                "USDC",
-                "Surplus from bid consideration",
-              ],
-              [
-                "04 / PROVIDER",
-                "Collateral received",
-                count(settlement?.deliveredNvdaAtoms),
-                "atoms",
-                "Raw NVDAx delivered atomically",
-              ],
-            ].map(([index, label, value, unit, description], i) => (
-              <div
-                className={`money-cell ${i === 3 ? "accent-cell" : ""}`}
-                key={index}
-              >
-                <span className="money-index">{index}</span>
-                <span className="money-label">{label}</span>
-                <strong>
-                  {value} <small>{unit}</small>
+            <div className="delivery-summary">
+              <span className="field-label">DELIVERED TO PROVIDER</span>
+              <div className="delivery-number">
+                {integer(settlement?.deliveredNvdaAtoms)}
+              </div>
+              <div className="delivery-unit">raw NVDAx atoms</div>
+              <div className="delivery-divider" />
+              <div className="delivery-row">
+                <span>Quantity remaining</span>
+                <strong>{integer(settlement?.remainingQuantity)} atoms</strong>
+              </div>
+              <div className="delivery-row">
+                <span>Bid address</span>
+                <strong title={settlement?.bid}>
+                  {short(settlement?.bid)}
                 </strong>
-                <p>{description}</p>
               </div>
-            ))}
-          </div>
-          <div className="settlement-footer">
-            <span>PAYMENT IDENTITY</span>
-            <strong>Consideration = debt repayment + borrower residual</strong>
-            <span className="equality">
-              {settlement
-                ? `${usd(settlement.paidUsdcAtoms)} = ${usd(settlement.repaidUsdcAtoms)} + ${usd(settlement.borrowerUsdcAtoms)}`
-                : "Awaiting local execution"}
-            </span>
+            </div>
           </div>
         </section>
 
-        <section className="section evidence" id="evidence">
-          <div className="section-heading">
+        <section className="section" id="evidence">
+          <div className="section-title">
             <div>
-              <span className="kicker">EXECUTION RECORD</span>
-              <h2>Evidence, not a promise.</h2>
+              <span className="section-index">03 / EVIDENCE</span>
+              <h2>Execution record</h2>
             </div>
             <p>
-              Confirmed steps and rejected simulations remain distinct. Select a
-              row to inspect the local signature, slot and failure reason.
+              Simulation rejections are labeled separately from confirmed local
+              transactions.
             </p>
           </div>
-          <div className="evidence-grid">
+          <div className="evidence-layout">
             <div className="ledger">
-              <div className="ledger-head">
-                <span>SCENARIO LEDGER</span>
+              <div className="ledger-header">
+                <span>STEP</span>
                 <span>
                   {receipt
-                    ? `${confirmed} CONFIRMED · ${rejected} REJECTED`
-                    : "NO RECEIPT"}
+                    ? `${confirmed} confirmed · ${rejected} rejected`
+                    : "No receipt"}
                 </span>
               </div>
               {steps.length ? (
                 steps.map((step, index) => (
-                  <div className="ledger-item" key={`${step.label}-${index}`}>
+                  <div className="ledger-entry" key={`${step.label}-${index}`}>
                     <button
-                      className="ledger-row"
-                      aria-expanded={selected === index}
+                      className="ledger-button"
+                      aria-expanded={selectedStep === index}
                       onClick={() =>
-                        setSelected(selected === index ? null : index)
+                        setSelectedStep(selectedStep === index ? null : index)
                       }
                     >
-                      <span className="ledger-index">
+                      <span className="step-number">
                         {String(index + 1).padStart(2, "0")}
                       </span>
-                      <span className="ledger-name">{step.label}</span>
+                      <span className="step-label">{step.label}</span>
                       <span
-                        className={`ledger-state ${step.status === "confirmed" ? "is-confirmed" : "is-rejected"}`}
+                        className={`step-status ${step.status === "confirmed" ? "confirmed" : "rejected"}`}
                       >
-                        {step.status === "confirmed" ? "CONFIRMED" : "REJECTED"}
+                        {step.status === "confirmed" ? "Confirmed" : "Rejected"}
                       </span>
-                      <span className="ledger-chevron">
-                        {selected === index ? "−" : "+"}
+                      <span className="step-toggle">
+                        {selectedStep === index ? "−" : "+"}
                       </span>
                     </button>
-                    {selected === index && <StepDetails step={step} />}
+                    {selectedStep === index && <StepDetails step={step} />}
                   </div>
                 ))
               ) : (
-                <div className="empty-ledger">
+                <div className="ledger-empty">
                   {data?.running
-                    ? "Building and executing the local scenario…"
+                    ? "Executing local scenario…"
                     : loading
                       ? "Loading receipt…"
-                      : "No local receipt yet. Run the scenario to populate this ledger."}
+                      : "Run the scenario to see its transaction record."}
                 </div>
               )}
               {receipt?.capacityFailure && (
                 <div className="capacity-rejection">
-                  <span>CAPACITY CHECK / REJECTED BEFORE SIGNING</span>
+                  <strong>
+                    Insufficient capacity · rejected before signing
+                  </strong>
                   <p>
-                    Requested {usd(receipt.capacityFailure.requestedRepay)} USDC
-                    against {usd(receipt.capacityFailure.availableFunds)} USDC
-                    remaining. The client refused to relax the bound.
+                    Requested {usd(receipt.capacityFailure.requestedRepay)}{" "}
+                    USDC; {usd(receipt.capacityFailure.availableFunds)} USDC
+                    remained. The request was not reduced automatically.
                   </p>
                 </div>
               )}
             </div>
-            <aside className="record-card">
-              <div className="record-top">
-                <span>RECORD / {receipt ? "01" : "—"}</span>
-                <span className="record-symbol">↗</span>
-              </div>
-              <h3>
-                {receipt?.status === "passed"
-                  ? "Verified local replay"
-                  : data?.running
-                    ? "Scenario in progress"
-                    : "Ready to verify"}
-              </h3>
+            <aside className="receipt-panel">
+              <span className="field-label">RECEIPT</span>
+              <h3>{receipt ? "Local replay" : "No run yet"}</h3>
               <p>
-                {receipt
-                  ? "Captured Kamino binaries, a fresh local Bidwall build, and ephemeral test signers. The Surfpool runtime stops after the scenario."
-                  : "Execute the local scenario to see confirmed signatures and a complete settlement receipt."}
+                Captured Kamino binaries and ephemeral test signers. The local
+                runtime stops after the scenario.
               </p>
               <dl>
                 <div>
-                  <dt>Environment</dt>
-                  <dd>Offline Surfpool</dd>
+                  <dt>Status</dt>
+                  <dd>{receipt?.status ?? "—"}</dd>
                 </div>
                 <div>
-                  <dt>Observed</dt>
-                  <dd>{moment(receipt?.startedAt)}</dd>
+                  <dt>Started</dt>
+                  <dd>{timestamp(receipt?.startedAt)}</dd>
                 </div>
                 <div>
                   <dt>Source slot</dt>
@@ -517,49 +457,29 @@ export default function Home() {
                   </dd>
                 </div>
                 <div>
-                  <dt>Bid</dt>
-                  <dd title={settlement?.bid}>{short(settlement?.bid)}</dd>
-                </div>
-                <div>
                   <dt>Obligation</dt>
                   <dd title={settlement?.obligation}>
                     {short(settlement?.obligation)}
                   </dd>
                 </div>
                 <div>
-                  <dt>Fixture SHA-256</dt>
+                  <dt>Fixture hash</dt>
                   <dd title={receipt?.fixtureSha256}>
-                    {receipt?.fixtureSha256
-                      ? receipt.fixtureSha256.slice(0, 14) + "…"
-                      : "—"}
+                    {receipt ? short(receipt.fixtureSha256) : "—"}
                   </dd>
                 </div>
               </dl>
-              <p className="record-disclaimer">
-                Local test funds · locally stressed oracle · no public Bidwall
-                deployment or production protocol support claimed.
+              <p className="receipt-note">
+                Local test funds and a locally stressed oracle. No public
+                Bidwall deployment or production support claimed.
               </p>
             </aside>
           </div>
-          {(data?.running || data?.error || requestError || receipt?.error) && (
-            <div className="run-status" role="status">
-              <strong>{data?.running ? "RUNNING" : "RUN STATUS"}</strong>
-              <div>
-                {requestError ||
-                  data?.error ||
-                  receipt?.error ||
-                  data?.output.slice(-3).join(" · ")}
-              </div>
-            </div>
-          )}
         </section>
       </main>
       <footer className="footer">
-        <div className="footer-brand">
-          bidwall<span>.</span>
-        </div>
-        <p>Funded capacity for the moments liquidity matters.</p>
-        <span>ONE MARKET · ONE ROUTE · ONE PROOF</span>
+        <span>Bidwall / local operator demo</span>
+        <span>Fixed NVDAx–USDC route · raw token units</span>
       </footer>
     </div>
   );
