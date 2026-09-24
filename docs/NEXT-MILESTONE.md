@@ -14,9 +14,11 @@ local demo that funds, settles, demonstrates rejected actions, expires and withd
 against captured real Kamino binaries. See [the operator demo](OPERATOR-DEMO.md)
 and [current component status](STATUS.md).
 
-Step 1 below is substantially delivered for the offline demo. Live state fetching,
-opportunity discovery and interactive wallet operation remain. The next implementation
-is step 2: the functional console. The quote observer and external validation remain open.
+Step 1 below is substantially delivered for the offline demo. The first frontend pass
+now launches that scripted scenario and presents its verified receipt; see
+[frontend scope](FRONTEND.md). Live state fetching, bid input, opportunity discovery
+and interactive wallet operation remain before step 2's completion. The quote observer
+and external validation remain open.
 
 The money-flow test gate for starting a functional interface has been met. The
 next milestone should make the proven flow usable and inspectable while preserving

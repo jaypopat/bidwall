@@ -1,190 +1,26 @@
 # Bidwall
 
-Start with the [component status](docs/STATUS.md) or run the
-[one-command operator demo](docs/OPERATOR-DEMO.md): `npm run demo:kamino`.
+Bidwall is a Solana hackathon prototype for funded, term-bound NVDAx/USDC liquidation bids. A provider escrows purchase capital in advance; an eligible Kamino v2 liquidation can atomically repay debt, deliver collateral to that provider, pay borrower surplus and reduce remaining bid capacity. The demonstrated route is deliberately narrow and is **not a public or production deployment**.
 
-The funded-bid program is `anchor/programs/bidwall`. It settles through both the
-separate lender harness and the real Kamino v2 liquidation interface. The Kamino
-path is demonstrated on a local mainnet fork and a self-contained offline replay;
-it is not a production deployment. See the [Kamino integration evidence](docs/KAMINO-INTEGRATION.md),
-[lender harness](docs/LENDER-ADAPTER.md), and [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md).
+## Run the local demo
 
-Run `npm run anchor-test` for SBF builds and all 46 workspace tests,
-`npm run test:kamino` for the 17 real-lender replay tests, or
-`npm run demo:core` for the harness settlement/depletion scenario.
+Prerequisites: [toolchain](docs/TOOLCHAIN.md), Surfpool 1.3.0, Node.js and pnpm 12.5.1.
 
-The proposed next milestone and open product decisions are in
-[the demo roadmap](docs/NEXT-MILESTONE.md).
-
-The frontend below is still the original SOL-vault starter; it does not display or
-operate Bidwall commitments yet.
-
----
-
-# bidwall
-
-Next.js starter with Tailwind CSS, `@solana/kit`, and an Anchor vault program example.
-
-## Getting Started
-
-```shell
-npx -y create-solana-dapp@latest -t solana-foundation/templates/kit/bidwall
-```
-
-```shell
+```sh
 pnpm install --frozen-lockfile --ignore-scripts
-npm run setup   # Builds the Anchor program and generates the TypeScript client
-npm run dev
+npm run dev:demo
 ```
 
-Open [http://localhost:3000](http://localhost:3000), connect your wallet, and interact with the vault.
+Open <http://127.0.0.1:3000>. The console's **Run local scenario** button builds the programs and client, starts a fresh offline Surfpool runtime, uses ephemeral local test signers, runs the complete commitment and liquidation sequence, and displays the receipt. The runtime stops afterward. The API is enabled only for the loopback-bound development server; ordinary `npm run dev` does not expose execution.
 
-## What's Included
+For a terminal-only run, use `npm run demo:kamino`. Read [operator demo](docs/OPERATOR-DEMO.md) for the sequence and [frontend scope](docs/FRONTEND.md) for what the browser does and does not yet operate. The [component status](docs/STATUS.md) is the quickest project map.
 
-- **Wallet connection** via wallet-standard with auto-discovery and dropdown UI
-- **Cluster switching** — devnet, testnet, mainnet, and localnet from the header
-- **Wallet balance** display with airdrop button (devnet/testnet/localnet)
-- **SOL Vault program** — deposit and withdraw SOL from a personal PDA vault
-- **Toast notifications** with explorer links for every transaction
-- **Error handling** — human-readable messages for common Solana and program errors
-- **Codama-generated client** — type-safe program interactions using `@solana/kit`
-- **Tailwind CSS v4** with light/dark mode toggle
+## Verify
 
-## Stack
-
-| Layer          | Technology                       |
-| -------------- | -------------------------------- |
-| Frontend       | Next.js 16, React 19, TypeScript |
-| Styling        | Tailwind CSS v4                  |
-| Solana Client  | `@solana/kit`, wallet-standard   |
-| Program Client | Codama-generated, `@solana/kit`  |
-| Program        | Anchor (Rust)                    |
-
-## Project Structure
-
-```
-├── app/
-│   ├── components/
-│   │   ├── cluster-context.tsx  # Cluster state (React context + localStorage)
-│   │   ├── cluster-select.tsx   # Cluster switcher dropdown
-│   │   ├── grid-background.tsx  # Solana-branded decorative grid
-│   │   ├── providers.tsx        # Wallet + theme providers
-│   │   ├── theme-toggle.tsx     # Light/dark mode toggle
-│   │   ├── vault-card.tsx       # Vault deposit/withdraw UI
-│   │   └── wallet-button.tsx    # Wallet connect/disconnect dropdown
-│   ├── generated/vault/        # Codama-generated program client
-│   ├── lib/
-│   │   ├── wallet/             # Wallet-standard connection layer
-│   │   │   ├── types.ts        # Wallet types
-│   │   │   ├── standard.ts     # Wallet discovery + session creation
-│   │   │   ├── signer.ts       # WalletSession → TransactionSigner
-│   │   │   └── context.tsx     # WalletProvider + useWallet() hook
-│   │   ├── hooks/
-│   │   │   ├── use-balance.ts  # SWR-based balance fetching
-│   │   │   └── use-send-transaction.ts  # Transaction send with loading state
-│   │   ├── cluster.ts          # Cluster endpoints + RPC factory
-│   │   ├── lamports.ts         # SOL/lamports conversion
-│   │   ├── send-transaction.ts # Transaction build + sign + send pipeline
-│   │   ├── errors.ts           # Transaction error parsing
-│   │   └── explorer.ts         # Explorer URL builder + address helpers
-│   └── page.tsx                # Main page
-├── anchor/                     # Anchor workspace
-│   └── programs/vault/         # Vault program (Rust)
-└── codama.json                 # Codama client generation config
+```sh
+npm run anchor-test   # SBF builds and 46 workspace tests
+npm run test:client   # typed client and fixture-manifest tests
+npm run ci            # web build, lint and formatting
 ```
 
-## Local Development
-
-To test against a local validator instead of devnet:
-
-1. **Start a local validator**
-
-   ```bash
-   solana-test-validator
-   ```
-
-2. **Deploy the program locally**
-
-   ```bash
-   solana config set --url localhost
-   cd anchor
-   anchor build
-   anchor deploy
-   cd ..
-   npm run codama:js   # Regenerate client with local program ID
-   ```
-
-3. **Switch to localnet** in the app using the cluster selector in the header.
-
-## Deploy Your Own Vault
-
-The included vault program is already deployed to devnet. To deploy your own:
-
-> **Note:** `npm run setup` and `npm run anchor-build` pass `--ignore-keys` to `anchor build` so the program keeps the devnet program ID shipped with this template (`F4jZpgbtTb6RWNWq6v35fUeiAsRJMrDczVPv9U23yXjB`). Anchor 1.x otherwise generates a fresh program keypair on build and rewrites `declare_id!`. The steps below build without that flag on purpose, so Anchor syncs your own program ID before deploying.
-
-### Prerequisites
-
-- [Rust](https://rustup.rs/)
-- [Solana CLI](https://solana.com/docs/intro/installation)
-- [Anchor](https://www.anchor-lang.com/docs/installation)
-
-### Steps
-
-1. **Configure Solana CLI for devnet**
-
-   ```bash
-   solana config set --url devnet
-   ```
-
-2. **Create a wallet (if needed) and fund it**
-
-   ```bash
-   solana-keygen new
-   solana airdrop 2
-   ```
-
-3. **Build and deploy the program**
-
-   ```bash
-   cd anchor
-   anchor build
-   anchor keys sync    # Updates program ID in source
-   anchor build        # Rebuild with new ID
-   anchor deploy
-   cd ..
-   ```
-
-4. **Regenerate the client and restart**
-   ```bash
-   npm run setup   # Rebuilds program and regenerates client
-   npm run dev
-   ```
-
-## Testing
-
-Tests use [LiteSVM](https://github.com/LiteSVM/litesvm), a fast lightweight Solana VM for testing.
-
-```bash
-npm run anchor-build   # Build the program first
-npm run anchor-test    # Run tests
-```
-
-The tests are in `anchor/programs/vault/src/tests.rs` and automatically use the program ID from `declare_id!`.
-
-## Regenerating the Client
-
-If you modify the program, regenerate the TypeScript client:
-
-```bash
-npm run setup   # Or: npm run anchor-build && npm run codama:js
-```
-
-This uses [Codama](https://github.com/codama-idl/codama) to generate a type-safe client from the Anchor IDL.
-
-## Learn More
-
-- [Solana Docs](https://solana.com/docs) — core concepts and guides
-- [Anchor Docs](https://www.anchor-lang.com/docs/introduction) — program development framework
-- [Deploying Programs](https://solana.com/docs/programs/deploying) — deployment guide
-- [@solana/kit](https://github.com/anza-xyz/kit) — Solana JavaScript SDK
-- [Codama](https://github.com/codama-idl/codama) — client generation from IDL
+The [canonical brief](docs/RWA-LIQUIDATION-DEPTH.md), [critical review](docs/RWA-LIQUIDATION-DEPTH-REVIEW.md), [evidence appendix](docs/RWA-LIQUIDATION-DEPTH-EVIDENCE.md), and [Kamino integration evidence](docs/KAMINO-INTEGRATION.md) explain the product, supported route and limits. The [next milestone plan](docs/NEXT-MILESTONE.md) lists remaining functionality and decisions.
