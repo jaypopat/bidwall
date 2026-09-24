@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { IBM_Plex_Sans, IBM_Plex_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -25,6 +25,8 @@ export const metadata: Metadata = {
     apple: "/icon.svg",
   },
 };
+
+export const viewport: Viewport = { themeColor: "#0f1612" };
 
 export default function RootLayout({
   children,

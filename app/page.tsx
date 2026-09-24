@@ -194,6 +194,11 @@ export default function Home() {
             </p>
           </div>
           <div className="intro-action">
+            <div className="dither-mark" aria-hidden="true">
+              <span className="dither-grid" />
+              <span className="dither-monogram">B</span>
+              <span className="dither-caption">BW / 01</span>
+            </div>
             <button
               className="run-button"
               disabled={loading || !data?.enabled || data.running}

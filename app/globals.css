@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
 :root {
-  --page: #f7f8f5;
-  --surface: #fff;
-  --ink: #18201b;
-  --secondary: #59635b;
-  --quiet: #808a81;
-  --line: #dfe5df;
-  --line-strong: #cbd4cc;
-  --accent: #456b49;
-  --accent-pale: #edf3ea;
+  color-scheme: dark;
+  --page: #0f1612;
+  --surface: #18221b;
+  --ink: #eef4ed;
+  --secondary: #abbcaf;
+  --quiet: #879b8b;
+  --line: #304135;
+  --line-strong: #49604d;
+  --accent: #c0e58b;
+  --accent-pale: #263a28;
   --mono: var(--font-ibm-plex-mono), monospace;
 }
 
@@ -49,15 +50,15 @@ p {
   margin: 0;
 }
 ::selection {
-  background: #dcebd6;
-  color: var(--ink);
+  background: #739963;
+  color: #0f1612;
 }
 
 .app {
   min-height: 100vh;
 }
 .site-header {
-  background: var(--surface);
+  background: #121b15;
   border-bottom: 1px solid var(--line);
 }
 .header-inner {
@@ -128,7 +129,7 @@ p {
   width: 6px;
   height: 6px;
   border-radius: 50%;
-  background: #649563;
+  background: var(--accent);
 }
 
 .main {
@@ -171,15 +172,59 @@ h1 {
   align-items: flex-end;
   gap: 9px;
 }
+.dither-mark {
+  position: relative;
+  width: 199px;
+  height: 91px;
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  background: #142019;
+}
+.dither-grid {
+  position: absolute;
+  inset: -6px;
+  background-image: radial-gradient(circle, #9bc879 1.05px, transparent 1.3px);
+  background-size: 7px 7px;
+  mask-image: radial-gradient(
+    ellipse 80% 108% at 45% 48%,
+    #000 18%,
+    transparent 82%
+  );
+  opacity: 0.62;
+}
+.dither-monogram {
+  position: absolute;
+  top: 6px;
+  left: 71px;
+  font-size: 73px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.12em;
+  color: #142019;
+  text-shadow:
+    1px 0 var(--accent),
+    -1px 0 var(--accent),
+    0 1px var(--accent),
+    0 -1px var(--accent);
+}
+.dither-caption {
+  position: absolute;
+  right: 9px;
+  bottom: 7px;
+  color: var(--accent);
+  font: 500 8px var(--mono);
+  letter-spacing: 0.08em;
+}
 .run-button {
   display: flex;
   justify-content: space-between;
   align-items: center;
   min-width: 199px;
   gap: 22px;
-  background: var(--ink);
-  border: 1px solid var(--ink);
-  color: white;
+  background: var(--accent);
+  border: 1px solid var(--accent);
+  color: #122017;
   padding: 12px 15px;
   font-size: 12px;
   font-weight: 600;
@@ -189,7 +234,7 @@ h1 {
     transform 0.15s;
 }
 .run-button:hover:not(:disabled) {
-  background: #304739;
+  background: #d2efa9;
   transform: translateY(-1px);
 }
 .run-button:disabled {
@@ -224,14 +269,14 @@ h1 {
   width: 7px;
   height: 7px;
   border-radius: 50%;
-  background: #9aa59a;
+  background: #728375;
   flex: none;
 }
 .status-indicator.passed {
-  background: #5d9260;
+  background: var(--accent);
 }
 .status-indicator.running {
-  background: #ce9b48;
+  background: #e0bb78;
 }
 .status-separator {
   width: 1px;
@@ -246,9 +291,9 @@ h1 {
 .error-bar {
   margin-top: 12px;
   padding: 12px 16px;
-  background: #f9edea;
-  color: #9b4a3b;
-  border: 1px solid #f0d4cc;
+  background: #30211f;
+  color: #f0b6a8;
+  border: 1px solid #6f4941;
   font-size: 12px;
 }
 .progress-bar {
@@ -259,15 +304,15 @@ h1 {
   color: var(--secondary);
   padding: 13px 15px;
   font: 11px var(--mono);
-  background: #f0f4ec;
-  border: 1px solid #dce8d7;
+  background: #1d2d20;
+  border: 1px solid #36533a;
 }
 .progress-spinner {
   display: block;
   flex: none;
   width: 11px;
   height: 11px;
-  border: 2px solid #bfd1b7;
+  border: 2px solid #526e52;
   border-top-color: var(--accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -325,7 +370,7 @@ h1 {
   margin-top: 19px;
 }
 .bid-overview h3 span {
-  color: #a6afa6;
+  color: var(--quiet);
   font-weight: 400;
 }
 .bid-overview > p {
@@ -393,7 +438,7 @@ h1 {
 }
 .capacity-track {
   height: 8px;
-  background: #e7ebe5;
+  background: #334338;
   margin-top: 24px;
 }
 .capacity-track > span {
@@ -425,7 +470,7 @@ h1 {
   background: var(--accent);
 }
 .key-remaining {
-  background: #dfe5dd;
+  background: #617463;
 }
 .capacity-footnote {
   border-top: 1px solid var(--line);
@@ -451,7 +496,7 @@ h1 {
   border-right: 1px solid var(--line);
 }
 .result-chip {
-  background: #f0f2ef;
+  background: #263329;
   color: var(--quiet);
 }
 .result-chip.settled {
@@ -553,7 +598,7 @@ h1 {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  background: #f2f5f0;
+  background: #202d23;
   border-bottom: 1px solid var(--line);
   padding: 11px 17px;
   font: 500 10px var(--mono);
@@ -575,11 +620,11 @@ h1 {
   cursor: pointer;
 }
 .ledger-button:hover {
-  background: #f8faf7;
+  background: #202d23;
 }
 .step-number {
   font: 500 10px var(--mono);
-  color: #a0aba0;
+  color: var(--quiet);
 }
 .step-label {
   font-size: 11px;
@@ -592,7 +637,7 @@ h1 {
   color: var(--accent);
 }
 .step-status.rejected {
-  color: #9d6848;
+  color: #e1b68e;
 }
 .step-toggle {
   text-align: right;
@@ -602,13 +647,13 @@ h1 {
 .step-details {
   border-bottom: 1px solid var(--line);
   padding: 16px 17px 18px 57px;
-  background: #fafbf9;
+  background: #141e17;
   color: var(--secondary);
   font-size: 11px;
 }
 .step-reason {
   margin-top: 7px;
-  color: #92684c;
+  color: #e1b68e;
 }
 .step-details dl {
   margin: 12px 0 0;
@@ -640,10 +685,10 @@ h1 {
 }
 .capacity-rejection {
   padding: 16px 17px;
-  background: #fcf9f3;
+  background: #29251e;
 }
 .capacity-rejection strong {
-  color: #946a47;
+  color: #e1b68e;
   font-size: 11px;
   font-weight: 600;
 }
