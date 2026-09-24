@@ -186,7 +186,6 @@ export default function Home() {
       <main className="main" id="top">
         <div className="page-intro">
           <div>
-            <p className="overline">BIDWALL / LOCAL OPERATOR DEMO</p>
             <h1>
               Capital that <span>commits.</span>
             </h1>

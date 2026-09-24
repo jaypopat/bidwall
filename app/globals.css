@@ -145,7 +145,6 @@ p {
   gap: 32px;
   padding: 46px 0 38px;
 }
-.overline,
 .section-index,
 .field-label {
   font: 500 10px var(--mono);
@@ -157,7 +156,7 @@ h1 {
   line-height: 1.1;
   letter-spacing: -0.048em;
   font-weight: 600;
-  margin: 11px 0 12px;
+  margin: 0 0 12px;
 }
 h1 span {
   color: var(--accent);
