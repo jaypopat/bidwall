@@ -62,7 +62,7 @@ p {
   border-bottom: 1px solid var(--line);
 }
 .header-inner {
-  max-width: 1260px;
+  max-width: 1180px;
   height: 66px;
   padding: 0 34px;
   margin: auto;
@@ -133,17 +133,17 @@ p {
 }
 
 .main {
-  max-width: 1260px;
+  max-width: 1180px;
   padding: 0 34px 86px;
   margin: auto;
 }
 .page-intro {
-  min-height: 226px;
+  min-height: 268px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 32px;
-  padding: 39px 0 35px;
+  padding: 46px 0 38px;
 }
 .overline,
 .section-index,
@@ -153,65 +153,84 @@ p {
   color: var(--accent);
 }
 h1 {
-  font-size: clamp(36px, 4vw, 48px);
+  font-size: clamp(39px, 4.5vw, 57px);
   line-height: 1.1;
   letter-spacing: -0.048em;
   font-weight: 600;
   margin: 11px 0 12px;
 }
+h1 span {
+  color: var(--accent);
+}
 .intro-copy {
-  max-width: 560px;
+  max-width: 490px;
   font-size: 14px;
   line-height: 1.6;
   color: var(--secondary);
+}
+.intro-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 19px;
+  margin-top: 23px;
+  color: var(--quiet);
+  font: 500 10px var(--mono);
+}
+.intro-facts span + span::before {
+  content: "/";
+  color: var(--line-strong);
+  margin-right: 19px;
 }
 .intro-action {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 9px;
+  gap: 10px;
+  width: 272px;
 }
 .dither-mark {
   position: relative;
-  width: 199px;
-  height: 91px;
-  margin-bottom: 12px;
+  width: 100%;
+  height: 112px;
+  margin-bottom: 7px;
   overflow: hidden;
   border: 1px solid var(--line);
   background: #142019;
 }
 .dither-grid {
   position: absolute;
-  inset: -6px;
-  background-image: radial-gradient(circle, #9bc879 1.05px, transparent 1.3px);
+  inset: 12px 16px 26px;
+  background-image: radial-gradient(circle, #a5d68c 1.15px, transparent 1.4px);
   background-size: 7px 7px;
-  mask-image: radial-gradient(
-    ellipse 80% 108% at 45% 48%,
-    #000 18%,
-    transparent 82%
+  clip-path: polygon(
+    3% 95%,
+    3% 50%,
+    24% 50%,
+    24% 95%,
+    37% 95%,
+    37% 15%,
+    58% 15%,
+    58% 95%,
+    71% 95%,
+    71% 35%,
+    92% 35%,
+    92% 95%
   );
-  opacity: 0.62;
+  opacity: 0.9;
 }
-.dither-monogram {
+.dither-baseline {
   position: absolute;
-  top: 6px;
-  left: 71px;
-  font-size: 73px;
-  line-height: 1;
-  font-weight: 700;
-  letter-spacing: -0.12em;
-  color: #142019;
-  text-shadow:
-    1px 0 var(--accent),
-    -1px 0 var(--accent),
-    0 1px var(--accent),
-    0 -1px var(--accent);
+  bottom: 24px;
+  left: 16px;
+  right: 16px;
+  height: 1px;
+  background: var(--line-strong);
 }
 .dither-caption {
   position: absolute;
-  right: 9px;
-  bottom: 7px;
+  right: 16px;
+  bottom: 8px;
   color: var(--accent);
   font: 500 8px var(--mono);
   letter-spacing: 0.08em;
@@ -220,7 +239,7 @@ h1 {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  min-width: 199px;
+  width: 100%;
   gap: 22px;
   background: var(--accent);
   border: 1px solid var(--accent);
@@ -362,6 +381,10 @@ h1 {
 .bid-overview {
   border-right: 1px solid var(--line);
 }
+.bid-capacity,
+.delivery-summary {
+  background: #1c2b20;
+}
 .bid-overview h3 {
   font-size: 27px;
   font-weight: 600;
@@ -429,6 +452,7 @@ h1 {
   line-height: 1.1;
   margin-top: 27px;
   white-space: nowrap;
+  color: var(--accent);
 }
 .capital-number span {
   font-size: 13px;
@@ -532,8 +556,11 @@ h1 {
   font-size: 10px;
 }
 .identity-lines {
-  margin-top: 26px;
-  border-top: 1px solid var(--line);
+  position: relative;
+  margin-top: 24px;
+  margin-left: 4px;
+  padding-left: 19px;
+  border-left: 1px solid var(--line-strong);
 }
 .identity-lines > div,
 .delivery-row {
@@ -544,6 +571,18 @@ h1 {
   padding-top: 13px;
   font-size: 11px;
   color: var(--secondary);
+}
+.identity-lines > div {
+  position: relative;
+}
+.identity-lines > div::before {
+  content: "";
+  position: absolute;
+  left: -19px;
+  top: 20px;
+  width: 11px;
+  height: 1px;
+  background: var(--line-strong);
 }
 .identity-lines strong,
 .delivery-row strong {
@@ -564,6 +603,7 @@ h1 {
   font-variant-numeric: tabular-nums;
   margin-top: 51px;
   white-space: nowrap;
+  color: var(--accent);
 }
 .delivery-unit {
   font-size: 12px;
@@ -633,6 +673,16 @@ h1 {
 .step-status {
   font-size: 10px;
 }
+.step-status::before {
+  content: "";
+  display: inline-block;
+  width: 5px;
+  height: 5px;
+  margin-right: 7px;
+  border-radius: 50%;
+  vertical-align: 1px;
+  background: currentColor;
+}
 .step-status.confirmed {
   color: var(--accent);
 }
@@ -700,6 +750,7 @@ h1 {
 }
 .receipt-panel {
   padding: 25px 24px;
+  background: #151f18;
 }
 .receipt-panel h3 {
   font-size: 21px;
@@ -742,7 +793,7 @@ h1 {
   line-height: 1.6;
 }
 .footer {
-  max-width: 1260px;
+  max-width: 1180px;
   padding: 20px 34px 30px;
   margin: auto;
   border-top: 1px solid var(--line);

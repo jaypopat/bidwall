@@ -186,18 +186,25 @@ export default function Home() {
       <main className="main" id="top">
         <div className="page-intro">
           <div>
-            <p className="overline">KAMINO V2 · NVDAx / USDC</p>
-            <h1>Liquidation backstop</h1>
+            <p className="overline">BIDWALL / LOCAL OPERATOR DEMO</p>
+            <h1>
+              Capital that <span>commits.</span>
+            </h1>
             <p className="intro-copy">
-              A fixed, fully funded bid for one named lending market. Run the
-              local scenario and inspect what actually settled.
+              A fully funded NVDAx bid, locked to one Kamino market. Run the
+              offline scenario and inspect every settlement leg.
             </p>
+            <div className="intro-facts">
+              <span>NVDAx / USDC</span>
+              <span>Kamino v2</span>
+              <span>Fixed-price bid</span>
+            </div>
           </div>
           <div className="intro-action">
             <div className="dither-mark" aria-hidden="true">
               <span className="dither-grid" />
-              <span className="dither-monogram">B</span>
-              <span className="dither-caption">BW / 01</span>
+              <span className="dither-baseline" />
+              <span className="dither-caption">CAPITAL / RESERVED</span>
             </div>
             <button
               className="run-button"
