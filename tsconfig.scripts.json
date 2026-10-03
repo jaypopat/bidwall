@@ -13,5 +13,11 @@
     "skipLibCheck": true,
     "types": ["bun"]
   },
-  "include": ["scripts/quotes/**/*.ts", "tests/quotes/**/*.ts"]
+  "include": [
+    "scripts/quotes/**/*.ts",
+    "tests/quotes/**/*.ts",
+    "scripts/risk/**/*.ts",
+    "tests/risk/**/*.ts",
+    "tests/demo/**/*.ts"
+  ]
 }

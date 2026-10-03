@@ -3,6 +3,7 @@ import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { DemoReceipt, DemoResponse, DemoStage, DemoStep } from "./types";
+import { readDeliveryQuote } from "./quote";
 
 const receiptPath = resolve(process.cwd(), "build/demo/receipt.json");
 const localNames = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -162,6 +163,65 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       stages.length !== stageOrder.length
     )
       return null;
+    const terms = raw.commitment;
+    const commitment =
+      terms &&
+      [
+        terms.start,
+        terms.expiry,
+        terms.scenarioNow,
+        terms.price,
+        terms.quantity,
+        terms.fundedUsdcAtoms,
+      ].every(isAtoms)
+        ? {
+            start: terms.start,
+            expiry: terms.expiry,
+            scenarioNow: terms.scenarioNow,
+            price: terms.price,
+            quantity: terms.quantity,
+            fundedUsdcAtoms: terms.fundedUsdcAtoms,
+          }
+        : undefined;
+    if (
+      terms &&
+      (!commitment ||
+        BigInt(commitment.start) > BigInt(commitment.scenarioNow) ||
+        BigInt(commitment.scenarioNow) >= BigInt(commitment.expiry) ||
+        commitment.price !== "150000000" ||
+        commitment.quantity !== "1000000000" ||
+        commitment.fundedUsdcAtoms !== "1500000000")
+    )
+      return null;
+    const d = raw.depletion;
+    const depletion =
+      d &&
+      isAddress(d.bid) &&
+      [
+        d.fundedUsdcAtoms,
+        d.deliveredNvdaAtoms,
+        d.remainingFunds,
+        d.remainingQuantity,
+        d.uncoveredRepayUsdcAtoms,
+      ].every(isAtoms) &&
+      d.status === "exhausted-and-rejected-in-simulation" &&
+      d.remainingFunds === "0" &&
+      d.remainingQuantity === "0" &&
+      d.bid !== settlement?.bid &&
+      d.fundedUsdcAtoms === settlement?.paidUsdcAtoms &&
+      d.deliveredNvdaAtoms === settlement?.deliveredNvdaAtoms &&
+      d.uncoveredRepayUsdcAtoms === settlement?.repaidUsdcAtoms
+        ? ({
+            bid: d.bid,
+            fundedUsdcAtoms: d.fundedUsdcAtoms,
+            deliveredNvdaAtoms: d.deliveredNvdaAtoms,
+            remainingFunds: d.remainingFunds,
+            remainingQuantity: d.remainingQuantity,
+            uncoveredRepayUsdcAtoms: d.uncoveredRepayUsdcAtoms,
+            status: d.status,
+          } as DemoReceipt["depletion"])
+        : undefined;
+    if (d && !depletion) return null;
     const capacity = raw.capacityFailure;
     return {
       status: raw.status,
@@ -172,6 +232,8 @@ async function readReceipt(): Promise<DemoReceipt | null> {
         typeof raw.bidwallSha256 === "string" ? raw.bidwallSha256 : undefined,
       steps,
       stages,
+      commitment,
+      depletion,
       settlement,
       capacityFailure:
         isAtoms(capacity?.requestedRepay) && isAtoms(capacity?.availableFunds)
@@ -190,6 +252,8 @@ async function readReceipt(): Promise<DemoReceipt | null> {
 
 export async function getDemoResponse(): Promise<DemoResponse> {
   const receipt = await readReceipt();
+  if (receipt?.status === "passed")
+    receipt.comparison = await readDeliveryQuote(receipt);
   return {
     enabled: true,
     running: state.running,

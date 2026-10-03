@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { MarketRisk } from "./components/market-risk";
 import type {
   DemoReceipt,
   DemoResponse,
@@ -24,13 +25,14 @@ const SCENARIO: {
     id: "locked",
     title: "Test the lock",
     pending: "Try to withdraw before expiry.",
-    complete: "Early withdrawal rejected in simulation.",
+    complete: "Expected rejection: early withdrawal was blocked in simulation.",
   },
   {
     id: "healthy",
     title: "Check eligibility",
     pending: "Attempt a healthy-loan liquidation.",
-    complete: "Healthy loan rejected in simulation.",
+    complete:
+      "Expected rejection: healthy-loan liquidation was blocked in simulation.",
   },
   {
     id: "stressed",
@@ -108,7 +110,7 @@ function StepDetails({ step }: { step: DemoStep }) {
       <p>
         {step.status === "confirmed"
           ? "Confirmed on the isolated local runtime."
-          : "Rejected in simulation. No transaction submitted."}
+          : "Expected rejection · check passed. The simulation blocked this deliberately invalid action. No transaction was submitted."}
       </p>
       {step.reason && <p className="step-reason">{step.reason}</p>}
       <dl>
@@ -149,6 +151,9 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string>();
   const [selectedStep, setSelectedStep] = useState<number | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const [quoteError, setQuoteError] = useState<string>();
+  const [nowMs, setNowMs] = useState<number | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -159,6 +164,7 @@ export default function Home() {
       }
       if (!response.ok) throw new Error(`Demo API returned ${response.status}`);
       setData((await response.json()) as DemoResponse);
+      setNowMs(Date.now());
       setRequestError(undefined);
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : String(error));
@@ -193,11 +199,31 @@ export default function Home() {
     }
   };
 
+  const compareQuote = async () => {
+    setQuoting(true);
+    setQuoteError(undefined);
+    try {
+      const response = await fetch("/api/demo/quote", { method: "POST" });
+      if (!response.ok) {
+        const body = await response.json().catch(() => ({}));
+        throw new Error(body.error ?? "Could not request the quote");
+      }
+      await refresh();
+    } catch (error) {
+      setQuoteError(error instanceof Error ? error.message : String(error));
+    } finally {
+      setQuoting(false);
+    }
+  };
+
   const receipt: DemoReceipt | null = data?.receipt ?? null;
   const completedStages = new Map(
     receipt?.stages.map((stage) => [stage.id, stage.mode])
   );
   const settlement = receipt?.settlement;
+  const commitment = receipt?.commitment;
+  const comparison = receipt?.comparison;
+  const depletion = receipt?.depletion;
   const steps = receipt?.steps ?? [];
   const confirmed = steps.filter((step) => step.status === "confirmed").length;
   const rejected =
@@ -229,9 +255,12 @@ export default function Home() {
             bidwall<span className="wordmark-dot">.</span>
           </a>
           <div className="header-right">
+            <a className="risk-nav-link" href="#market-risk">
+              Market risk
+            </a>
             <span className="header-product">Operator console</span>
             <span className="env-badge">
-              <span /> LOCAL / OFFLINE
+              <span /> LOCAL CONSOLE
             </span>
           </div>
         </div>
@@ -334,7 +363,7 @@ export default function Home() {
                       {mode === "confirmed"
                         ? "Confirmed"
                         : mode === "rejected-in-simulation"
-                          ? "Rejected in simulation"
+                          ? "Check passed"
                           : mode === "local-override"
                             ? "Local override"
                             : "Waiting"}
@@ -348,7 +377,8 @@ export default function Home() {
           </ol>
           <p className="scenario-note">
             Replay and insufficient-capacity checks appear in the execution
-            record below. Simulated rejections did not submit transactions.
+            record below. Expected rejections are passed checks; no transaction
+            was submitted for those attempts.
           </p>
         </section>
 
@@ -380,6 +410,34 @@ export default function Home() {
                   <span>Maximum quantity</span>
                   <strong>1,000,000,000</strong>
                   <small>raw NVDAx atoms</small>
+                </div>
+                <div>
+                  <span>Commitment starts</span>
+                  <strong className="term-date">
+                    {commitment
+                      ? timestamp(
+                          new Date(
+                            Number(commitment.start) * 1000
+                          ).toISOString()
+                        )
+                      : "Awaiting run"}
+                  </strong>
+                  <small>local scenario clock</small>
+                </div>
+                <div>
+                  <span>Expiry / withdrawal unlocks</span>
+                  <strong className="term-date">
+                    {commitment
+                      ? timestamp(
+                          new Date(
+                            Number(commitment.expiry) * 1000
+                          ).toISOString()
+                        )
+                      : "Awaiting run"}
+                  </strong>
+                  <small>
+                    one-hour replay window; historical scenario time
+                  </small>
                 </div>
               </div>
             </div>
@@ -418,7 +476,124 @@ export default function Home() {
               </p>
             </div>
           </div>
+          <div className="demo-comparison">
+            <div className="comparison-heading">
+              <div>
+                <span className="field-label">EXTERNAL SELL QUOTE</span>
+                <h3>Same delivered quantity</h3>
+              </div>
+              <button
+                className="secondary-button"
+                disabled={
+                  quoting || data?.running || receipt?.status !== "passed"
+                }
+                onClick={() => void compareQuote()}
+              >
+                {quoting
+                  ? "Requesting quote…"
+                  : comparison
+                    ? "Refresh mainnet quote"
+                    : "Get mainnet quote"}
+              </button>
+            </div>
+            <p>
+              Mainnet Jupiter indication, not executed. The quote uses exactly{" "}
+              {integer(settlement?.deliveredNvdaAtoms)} raw NVDAx atoms. Mainnet
+              prices and the replay’s locally stressed Scope price of 150
+              differ; these figures do not measure a stress-market advantage.
+            </p>
+            {comparison && (
+              <p>
+                Mainnet reference:{" "}
+                {comparison.referencePriceUsd
+                  ? `${comparison.referencePriceUsd} USD per 100,000,000 raw atoms`
+                  : "unavailable"}
+                . Local Scope reference: 150 at settlement. Raw quantities are
+                not automatically UI-scaled share quantities.
+              </p>
+            )}
+            {comparison && (
+              <>
+                <div className="comparison-values">
+                  <Metric
+                    label="LOCAL BID CONSIDERATION"
+                    value={usd(settlement?.paidUsdcAtoms)}
+                    unit="USDC"
+                    note="Confirmed local replay"
+                  />
+                  <Metric
+                    label="MAINNET SELL QUOTE"
+                    value={
+                      comparison.status === "ok"
+                        ? usd(comparison.outAmountRaw)
+                        : "—"
+                    }
+                    unit="USDC"
+                    note={
+                      comparison.status === "ok"
+                        ? `Minimum ${usd(comparison.minOutAmountRaw)} USDC · ${comparison.slippageBps / 100}% slippage`
+                        : comparison.status === "no-route"
+                          ? "No route returned; not executed"
+                          : "Quote unavailable; not evidence of zero depth"
+                    }
+                  />
+                </div>
+                <p className="comparison-meta">
+                  Observed {timestamp(comparison.observedAt)} ·{" "}
+                  {nowMs === null
+                    ? "age unavailable"
+                    : `${Math.max(0, Math.floor((nowMs - Date.parse(comparison.observedAt)) / 60000))} minutes old`}{" "}
+                  ·{" "}
+                  {comparison.contextSlot
+                    ? `slot ${comparison.contextSlot.toLocaleString("en-US")}`
+                    : "no quote slot"}
+                  {comparison.routeLabels?.length
+                    ? ` · ${comparison.routeLabels.join(" → ")}`
+                    : ""}
+                </p>
+                <details className="comparison-provenance">
+                  <summary>Quote units and raw evidence</summary>
+                  <dl>
+                    <div>
+                      <dt>Input mint / decimals</dt>
+                      <dd>
+                        {comparison.inputMint} / {comparison.inputDecimals}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Output mint / decimals</dt>
+                      <dd>
+                        {comparison.outputMint} / {comparison.outputDecimals}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Input raw atoms</dt>
+                      <dd>{comparison.inAmountRaw}</dd>
+                    </div>
+                    <div>
+                      <dt>Output / minimum atoms</dt>
+                      <dd>
+                        {comparison.outAmountRaw ?? "—"} /{" "}
+                        {comparison.minOutAmountRaw ?? "—"}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Raw file</dt>
+                      <dd>build/demo/{comparison.rawPath}</dd>
+                    </div>
+                    <div>
+                      <dt>SHA-256</dt>
+                      <dd>{comparison.rawSha256}</dd>
+                    </div>
+                  </dl>
+                </details>
+              </>
+            )}
+            {quoteError && <p role="alert">{quoteError}</p>}
+          </div>
         </section>
+
+        <MarketRisk remainingUsdcAtoms={settlement?.remainingFunds} />
 
         <section className="section" id="settlement">
           <div className="section-title">
@@ -477,6 +652,55 @@ export default function Home() {
           </div>
         </section>
 
+        <section className="section" id="depletion">
+          <div className="section-title">
+            <div>
+              <span className="section-index">CAPACITY / SEPARATE REPLAY</span>
+              <h2>A funded bid can run out</h2>
+            </div>
+            <p>
+              The lender fixture is reset for this independent case. It does not
+              represent a second observed mainnet liquidation.
+            </p>
+          </div>
+          <div className="depletion-panel">
+            <div className="comparison-values">
+              <Metric
+                label="EXACT-CAPACITY BID FUNDED"
+                value={usd(depletion?.fundedUsdcAtoms)}
+                unit="USDC"
+                note="New bid, funded through normal instructions"
+              />
+              <Metric
+                label="ESCROW AFTER SETTLEMENT"
+                value={usd(depletion?.remainingFunds)}
+                unit="USDC"
+                note={
+                  depletion
+                    ? "Exhausted · zero quantity remains"
+                    : "Awaiting depletion replay"
+                }
+              />
+              <Metric
+                label="UNCOVERED REPAYMENT"
+                value={usd(depletion?.uncoveredRepayUsdcAtoms)}
+                unit="USDC"
+                note="Further request at the measured repayment size"
+              />
+            </div>
+            <p>
+              {depletion
+                ? `The new bid bought ${integer(depletion.deliveredNvdaAtoms)} raw NVDAx atoms and spent its entire escrow. Another attempt was rejected in simulation because the bid was exhausted; no transaction was submitted. The client also refused to prepare it.`
+                : "After the main lifecycle, a new bid funds exactly the measured delivery, executes through real Kamino and verifies zero funds, zero quantity and Exhausted state before testing another attempt."}
+            </p>
+            {depletion && (
+              <p className="comparison-meta">
+                Bid {short(depletion.bid)} · expected rejection · check passed
+              </p>
+            )}
+          </div>
+        </section>
+
         <section className="section" id="evidence">
           <div className="section-title">
             <div>
@@ -484,8 +708,8 @@ export default function Home() {
               <h2>Execution record</h2>
             </div>
             <p>
-              Simulation rejections are labeled separately from confirmed local
-              transactions.
+              Expected rejections show that the safeguards worked. Confirmed
+              entries are transactions executed on the local runtime.
             </p>
           </div>
           <div className="evidence-layout">
@@ -494,7 +718,7 @@ export default function Home() {
                 <span>STEP</span>
                 <span>
                   {receipt
-                    ? `${confirmed} confirmed · ${rejected} rejected`
+                    ? `${confirmed} confirmed · ${rejected} expected rejections passed`
                     : "No receipt"}
                 </span>
               </div>
@@ -513,9 +737,11 @@ export default function Home() {
                       </span>
                       <span className="step-label">{step.label}</span>
                       <span
-                        className={`step-status ${step.status === "confirmed" ? "confirmed" : "rejected"}`}
+                        className={`step-status ${step.status === "confirmed" ? "confirmed" : "expected-rejection"}`}
                       >
-                        {step.status === "confirmed" ? "Confirmed" : "Rejected"}
+                        {step.status === "confirmed"
+                          ? "Confirmed"
+                          : "Expected rejection · check passed"}
                       </span>
                       <span className="step-toggle">
                         {selectedStep === index ? "−" : "+"}
@@ -535,13 +761,19 @@ export default function Home() {
               )}
               {receipt?.capacityFailure && (
                 <div className="capacity-rejection">
-                  <strong>
-                    Insufficient capacity · rejected before signing
-                  </strong>
+                  <strong>Expected rejection · check passed</strong>
                   <p>
-                    Requested {usd(receipt.capacityFailure.requestedRepay)}{" "}
-                    USDC; {usd(receipt.capacityFailure.availableFunds)} USDC
-                    remained. The request was not reduced automatically.
+                    Capacity boundary test: deliberately requested{" "}
+                    {usd(
+                      (
+                        BigInt(receipt.capacityFailure.requestedRepay) -
+                        BigInt(receipt.capacityFailure.availableFunds)
+                      ).toString()
+                    )}{" "}
+                    USDC more than the remaining funds. Requested{" "}
+                    {usd(receipt.capacityFailure.requestedRepay)} USDC;{" "}
+                    {usd(receipt.capacityFailure.availableFunds)} USDC remained.
+                    Blocked before signing; no transaction was submitted.
                   </p>
                 </div>
               )}

@@ -168,6 +168,14 @@ try {
     (await account(plan.escrow)).data.readBigUInt64LE(64),
     plan.budget
   );
+  report.commitment = {
+    start: fundedBid.start,
+    expiry: fundedBid.expiry,
+    scenarioNow: now,
+    price: fundedBid.price,
+    quantity: fundedBid.quantity,
+    fundedUsdcAtoms: plan.budget,
+  };
   markStage("funded", "confirmed");
   const obligationAddress = kit.address(recorded[17].key);
   const loanAccount = await account(obligationAddress),
@@ -356,6 +364,131 @@ try {
   );
   assert.equal((await readBid()).state, generated.BidState.Withdrawn);
   markStage("withdrawn", "confirmed");
+  // Independent capacity case: restore captured lender state, then fund a new
+  // bid through normal instructions for exactly the measured first delivery.
+  // This is a reset replay, not a claim of a second live eligible obligation.
+  for (const [key, a] of Object.entries(fixture.accounts)) {
+    if (
+      a.executable ||
+      a.owner === generated.BIDWALL_PROGRAM_ADDRESS ||
+      skip.has(key)
+    )
+      continue;
+    await rpc("surfnet_setAccount", [
+      key,
+      {
+        lamports: a.lamports,
+        owner: a.owner,
+        data: Buffer.from(a.data, "base64").toString("hex"),
+      },
+    ]);
+  }
+  const resetClock = (
+    await account("SysvarC1ock11111111111111111111111111111111")
+  ).data;
+  resetClock.writeBigInt64LE(now, 32);
+  await rpc("surfnet_setAccount", [
+    "SysvarC1ock11111111111111111111111111111111",
+    { data: resetClock.toString("hex") },
+  ]);
+  await setPrice(false);
+  const exactPlan = await client.prepareBid({
+    provider: payer,
+    market: market.address,
+    id: 2n,
+    price: fundedBid.price,
+    quantity: received,
+    start: now - 1n,
+    expiry: now + 3600n,
+    now,
+  });
+  assert.equal(exactPlan.budget, paid);
+  await transact(
+    "fund exact-capacity bid · separate reset replay",
+    exactPlan.instructions
+  );
+  const exactAccount = await account(exactPlan.bid);
+  const exactBid = client.decodeBid(
+    exactAccount.data,
+    kit.address(exactAccount.owner)
+  );
+  const exactSettlement = await client.prepareSettlement({
+    keeper: payer,
+    bid: exactBid,
+    obligation: obligationAddress,
+    borrower: loan.owner,
+    expectedDepositedCtokens: loan.depositedCtokens,
+    maxRepay: paid,
+    minCollateral: received,
+    now,
+  });
+  await transact(
+    "create exact-capacity settlement accounts",
+    exactSettlement.setup
+  );
+  const extraKeys = [
+    ...new Set(
+      exactSettlement.instructions.flatMap((i) =>
+        i.accounts.map((a) => a.address)
+      )
+    ),
+  ].filter((k) => k !== payer.address && !lookupKeys.includes(k));
+  for (let i = 0; i < extraKeys.length; i += 20)
+    await transact("extend capacity-case lookup table", [
+      getExtendLookupTableInstruction({
+        address: table,
+        authority: payer,
+        payer,
+        addresses: extraKeys.slice(i, i + 20),
+      }),
+    ]);
+  await transact("activate capacity-case lookup table", []);
+  setLookupTables({ [table]: [...lookupKeys, ...extraKeys] });
+  await transact(
+    "exhaust exact-capacity bid through real Kamino",
+    exactSettlement.instructions
+  );
+  const exhaustedAccount = await account(exactPlan.bid);
+  const exhausted = client.decodeBid(
+    exhaustedAccount.data,
+    kit.address(exhaustedAccount.owner)
+  );
+  assert.equal(exhausted.state, generated.BidState.Exhausted);
+  assert.equal(exhausted.remainingFunds, 0n);
+  assert.equal(exhausted.remainingQuantity, 0n);
+  assert.equal((await account(exactPlan.escrow)).data.readBigUInt64LE(64), 0n);
+  await assert.rejects(
+    () =>
+      client.prepareSettlement({
+        keeper: payer,
+        bid: exhausted,
+        obligation: obligationAddress,
+        borrower: loan.owner,
+        expectedDepositedCtokens: loan.depositedCtokens,
+        maxRepay: repaid,
+        minCollateral: received,
+        now,
+      }),
+    /Bid is not active/
+  );
+  await transact(
+    "another attempt on exhausted bid",
+    exactSettlement.instructions,
+    {
+      expectedError: { InstructionError: [4, { Custom: 6001 }] },
+    }
+  );
+  assert.deepEqual((await account(exactPlan.bid)).data, exhaustedAccount.data);
+  report.depletion = {
+    bid: exactPlan.bid,
+    fundedUsdcAtoms: paid,
+    deliveredNvdaAtoms: received,
+    remainingFunds: exhausted.remainingFunds,
+    remainingQuantity: exhausted.remainingQuantity,
+    uncoveredRepayUsdcAtoms: repaid,
+    status: "exhausted-and-rejected-in-simulation",
+  };
+  save();
   report.status = "passed";
   save();
   console.log("PASS — receipt saved to build/demo/receipt.json");

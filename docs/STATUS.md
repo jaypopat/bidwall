@@ -1,6 +1,6 @@
 # Bidwall component status
 
-As of 24 September 2026, after the first frontend pass. This is the current component map;
+As of 4 October 2026, after the risk monitor and scoped demo completion. This is the current component map;
 older milestone documents explain the implementation history.
 
 | Component          | Current state                                                                                                        | What remains                                                                         |
@@ -9,17 +9,19 @@ older milestone documents explain the implementation history.
 | Lender harness     | Separate deployed test program plus malicious-program fixture                                                        | Retained for controlled adversarial tests                                            |
 | Kamino adapter     | Real v2 CPI verified on a mainnet fork and captured-binary replay                                                    | Support remains limited to the documented public NVDAx/USDC route                    |
 | Fresh-fork tooling | Mainnet reads, controlled local oracle stress, verified settlement, explicit fixture capture                         | Research SDK advisories remain; live state may require reselection                   |
-| Offline demo       | Terminal command or loopback browser action runs a fresh full scenario and exports a verified receipt                | Individually controlled steps and broader operator experience                        |
+| Offline demo       | Full lifecycle plus a separately funded exact-capacity Kamino replay verifies exhaustion and rejects another attempt | Individually controlled steps and broader operator experience                        |
 | Shared client      | Generated Anchor bindings, exact units, PDA/account preparation, bounded settlement and error explanations; 6 tests  | Application state fetching, wallet wiring and simulation/confirmation UI             |
 | Keeper             | Manual transaction preparation exists                                                                                | No continuous watcher, automatic opportunity discovery or production signing service |
-| Frontend           | Bidwall console follows six live scenario stages, then shows commitment, capacity, money flow and transaction ledger | Wallet-driven bid entry, live account reads and interactive settlement review        |
-| Quote observer     | Hourly Jupiter quotes for five xStocks and the demo lot, labelled by market session, on the `evidence/quotes` branch | Enough weekend and trading-hours runs to cite; Kamino oracle comparison              |
+| Frontend           | Six stages, recorded start/expiry, exact-delivery mainnet quote, depletion case, money flow and execution ledger     | Wallet-driven bid entry, live account reads and interactive settlement review        |
+| Quote observer     | Hourly Jupiter quotes for nine xStocks and the demo lot, labelled by market session, on the `evidence/quotes` branch | More weekend and trading-hours observations to cite                                  |
+| Risk monitor       | Read-only mainnet loan scans, 31 stress scenarios, quote-depth comparison, hourly evidence and console view          | Longer evidence series and an operator assessment of the measured gaps               |
 | Deployment         | Local runtimes only                                                                                                  | No mainnet or public Bidwall deployment claimed                                      |
 | Economics / demand | Still hypotheses                                                                                                     | Named operator use case, provider terms, reservation and keeper compensation         |
 
-The practical next implementation is a wallet-driven functional console against a
-persistent local runtime. The current console operates the fixed scripted scenario
-and inspects its receipt; it does not yet let a user choose bid terms or sign steps.
+Use the risk evidence to assess which asset and conditions warrant committed
+liquidation capacity before broadening the execution demo. The console still
+operates the fixed local scenario; choosing bid terms and signing individual
+steps against a persistent local runtime remain separate work.
 
 ## Start here
 
@@ -27,8 +29,20 @@ and inspects its receipt; it does not yet let a user choose bid terms or sign st
 - **Why this design?** [Critical review](RWA-LIQUIDATION-DEPTH-REVIEW.md).
 - **How does the lender settlement work?** [Kamino integration](KAMINO-INTEGRATION.md).
 - **Can I run and inspect it?** [Operator demo](OPERATOR-DEMO.md) or [web console](FRONTEND.md): `npm run dev:demo`.
+- **Where would committed capacity help?** [Risk monitor](RISK-MONITOR.md): scan loans and compare observed exit depth.
 - **What remains and what must we decide?** [Next milestone](NEXT-MILESTONE.md).
 
-Latest checks: 42 Rust workspace tests, 6 client/manifest tests, successful repeated
-offline demo, and web build/lint/format checks. The fork SDK advisories and production limitations are documented
-in the integration notes; passing tests do not remove those limitations.
+Current risk-monitor checks: 41 quote tests, 23 risk tests, web build/lint/format,
+strict script typechecking, live mainnet scans, and SDK comparison of seven loans
+and 12 reserves. Demo comparison adds 11 tests for exact quantity, mint/mode/output
+validation, slippage bounds and failure states. Desktop and mobile layouts, recorded terms,
+exhaustion receipts and a live exact-quantity Jupiter quote were verified.
+
+The hourly quote-observer workflow also scans market risk from the default branch,
+using the repository's configured RPC secret. Current marketwide stress evidence has not shown a positive xStock shortfall
+under the documented first-liquidation/fixed-quote-curve model. Commercial usefulness
+remains to be established through a longer evidence series and provider/operator terms.
+
+Earlier execution checks: 42 Rust workspace tests, 6 client/manifest tests and
+successful repeated offline demo. The fork SDK advisories and production limitations
+are documented in the integration notes; passing tests do not remove those limitations.

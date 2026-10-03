@@ -22,6 +22,12 @@ page is a scripted local launcher and receipt viewer, not wallet-driven bidding.
 Its stage cards advance during the run and distinguish confirmed transactions,
 simulation rejections and the local oracle override.
 
+Commitment start and expiry come from the funded bid account and use the historical
+local scenario clock. After the main lifecycle, the runner performs a separate
+exact-capacity replay. **Get mainnet quote** requests an optional read-only Jupiter
+sell quote for the exact quantity delivered in the passed receipt. It is not part
+of the offline execution and never builds or sends a swap.
+
 `npm run` executes scripts only; dependency installation uses pnpm and its committed
 lockfile. The obsolete starter Bun lockfile was removed. The optional resolver
 fallback build is explicitly disabled in `pnpm-workspace.yaml`; installed platform
@@ -54,6 +60,14 @@ installation and an uncached Rust build can still require network access.
    rejected by the client before signing; no automatic reduction of the request.
 8. Move the local scenario clock to expiry, withdraw the unspent escrow and verify
    provider credit, empty escrow and the Withdrawn state.
+9. Restore captured lender state and scenario time for a clearly labelled,
+   independent capacity case. Create/fund/activate a new bid for exactly the
+   measured delivery, with 594.633549 USDC in the verified run. Settle through
+   real Kamino; assert Exhausted state, zero escrow and zero remaining quantity.
+10. Verify that the client refuses another attempt, and that simulation rejects
+    the previously prepared instructions with the exhausted-bid error. No failed
+    transaction is submitted. This resets the same captured loan; it does not
+    claim a second eligible mainnet loan or a measured market shortfall.
 
 Two fresh runs produced the same money flow:
 
@@ -89,7 +103,26 @@ The receipt distinguishes:
 The CLI's rejected actions are preflight demonstrations. The Rust adversarial suite
 separately executes failing transactions and checks complete state rollback. The CLI
 capacity example demonstrates an insufficient budget, not complete bid exhaustion;
-the on-chain replay tests separately cover exhaustion.
+the additional exact-capacity case demonstrates exhaustion through confirmed local
+execution. The subsequent attempt is rejected in simulation; the on-chain Rust
+tests also submit failing transactions and verify rollback.
+
+## Exact-quantity mainnet comparison
+
+After a passed run, click **Get mainnet quote**. The request is fixed to the verified
+NVDAx mint, USDC output, the receipt's delivered raw atoms and 50 bps slippage. The
+server verifies input/output identities, ExactIn mode, quantity and output bounds.
+No route, request failure and a successful quote remain distinct states.
+
+The console shows output and minimum output, observation time/age, context slot,
+route and the Jupiter token-API reference price where available. It explicitly
+separates the mainnet price from the local Scope override of 150. This comparison
+does not establish superior stressed-market execution or profitable provider terms.
+
+Raw HTTP exchanges are saved under `build/demo/quote-*.json.gz` with SHA-256;
+`build/demo/quote.json` ties the summary to the run, bid and exact delivered quantity.
+Polling only reads this evidence. A new run hides the old comparison; refresh is
+manual. These files, like the receipt, are ignored artifacts.
 
 ## Shared code
 
@@ -119,7 +152,7 @@ there is no generic arbitrary-lender dispatch or silent fallback.
 npm run anchor-test     # 42 workspace tests and SBF/IDL builds
 npm run test:client     # 6 tests, including exact fixture wire/account compatibility
 npm run demo:kamino     # fresh offline runtime and complete lifecycle
-npm run ci             # web build, lint, formatting
+npm run ci             # web build, lint, formatting, quote/risk/demo tests
 npm run codama:bidwall  # regenerate bindings after an IDL change
 ```
 
@@ -150,5 +183,6 @@ advisories remain unresolved; they are not dependencies of this new demo/client.
 
 Next: connect a functional Bidwall console to this shared client and show actual
 local state and receipts. A live operator workflow still needs state fetching,
-quote discovery and wallet integration; the quote observer and commercial validation
-are separate remaining work. This milestone is not a public deployment or audit.
+quote discovery and wallet integration. The quote observer and read-only risk monitor
+are implemented; commercial validation and a longer evidence series remain.
+This milestone is not a public deployment or audit.

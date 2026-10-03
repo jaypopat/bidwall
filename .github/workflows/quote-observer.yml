@@ -34,6 +34,12 @@ jobs:
       - name: Observe
         run: bun scripts/quotes/observe.ts --out evidence/quotes --runner github-actions
 
+      - name: Scan market risk
+        if: always()
+        env:
+          SOLANA_RPC_URL: ${{ secrets.SOLANA_RPC_URL }}
+        run: bun scripts/risk/snapshot.ts --quotes evidence/quotes --out evidence/risk
+
       # Runs even when every quote failed, so outages are recorded too.
       - name: Commit the observation
         if: always()
@@ -41,7 +47,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add quotes
+          git add --all quotes risk
           if git diff --cached --quiet; then exit 0; fi
           git commit -m "data: quote observation $(date -u +%Y-%m-%dT%H:%MZ)"
           git push || (git pull --rebase && git push)

@@ -1,6 +1,6 @@
 # From verified settlement to a usable Bidwall demo
 
-Roadmap · updated 24 September 2026
+Roadmap · updated 4 October 2026
 
 This document proposes the next implementation sequence. It records recommendations,
 not a decision to deploy or accept real funds. The [canonical brief](RWA-LIQUIDATION-DEPTH.md)
@@ -18,7 +18,15 @@ Step 1 below is substantially delivered for the offline demo. The first frontend
 now launches that scripted scenario and presents its verified receipt; see
 [frontend scope](FRONTEND.md). Live state fetching, bid input, opportunity discovery
 and interactive wallet operation remain before step 2's completion. The quote observer
-and external validation remain open.
+and read-only risk monitor are now implemented. The scoped demo also shows actual
+commitment dates, an exact-delivery mainnet quote with raw evidence, and a separate
+confirmed exhaustion case. External commercial validation remains open.
+
+The immediate demo gaps are closed. Next, collect hourly risk evidence over
+different market sessions and rehearse/record the presentation. The latest measured
+model did not find a positive xStock shortfall in the marketwide shock cases; the
+execution proof alone does not establish demand. Prioritize an operator use case and
+concrete provider terms before expanding the wallet console.
 
 The money-flow test gate for starting a functional interface has been met. The
 next milestone should make the proven flow usable and inspectable while preserving

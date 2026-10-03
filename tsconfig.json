@@ -6,6 +6,7 @@
     "skipLibCheck": true,
     "strict": true,
     "noEmit": true,
+    "allowImportingTsExtensions": true,
     "esModuleInterop": true,
     "module": "esnext",
     "moduleResolution": "bundler",
@@ -30,5 +31,12 @@
     ".next/dev/types/**/*.ts",
     "**/*.mts"
   ],
-  "exclude": ["node_modules", "build", "scripts/quotes", "tests/quotes"]
+  "exclude": [
+    "node_modules",
+    "build",
+    "scripts/quotes",
+    "tests/quotes",
+    "scripts/risk",
+    "tests/risk"
+  ]
 }

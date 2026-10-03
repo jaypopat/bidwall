@@ -20,6 +20,24 @@ export type DemoReceipt = {
   bidwallSha256?: string;
   steps: DemoStep[];
   stages: DemoStage[];
+  commitment?: {
+    start: string;
+    expiry: string;
+    scenarioNow: string;
+    price: string;
+    quantity: string;
+    fundedUsdcAtoms: string;
+  };
+  depletion?: {
+    bid: string;
+    fundedUsdcAtoms: string;
+    deliveredNvdaAtoms: string;
+    remainingFunds: string;
+    remainingQuantity: string;
+    uncoveredRepayUsdcAtoms: string;
+    status: "exhausted-and-rejected-in-simulation";
+  };
+  comparison?: DemoQuote;
   settlement?: {
     bid: string;
     obligation: string;
@@ -36,6 +54,25 @@ export type DemoReceipt = {
     status: string;
   };
   error?: string;
+};
+
+export type DemoQuote = {
+  status: "ok" | "no-route" | "error";
+  observedAt: string;
+  inputMint: string;
+  outputMint: string;
+  inputDecimals: 8;
+  outputDecimals: 6;
+  inAmountRaw: string;
+  slippageBps: number;
+  outAmountRaw?: string;
+  minOutAmountRaw?: string;
+  contextSlot?: number;
+  routeLabels?: string[];
+  priceImpactPct?: string;
+  referencePriceUsd?: string;
+  rawSha256: string;
+  rawPath: string;
 };
 
 export type DemoResponse = {
