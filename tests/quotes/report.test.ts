@@ -59,15 +59,44 @@ const monday = observation("2026-10-05T14:07:00.000Z", "regular", {
 });
 
 describe("renderReport", () => {
-  test("shows the median deviation per session and the no-route count", () => {
-    expect(renderReport([weekendA, weekendB, weekendNoRoute, monday])).toBe(
+  test("shows medians per session alongside every failure and skip", () => {
+    const weekendError = observation("2026-10-03T22:07:00.000Z", "weekend", {
+      status: "error",
+      error: "HTTP 429: Too many requests",
+    });
+    const skipped: Observation = {
+      ...observation("2026-10-05T15:07:00.000Z", "regular", {}),
+      tokens: [
+        {
+          symbol: "NVDAx",
+          mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+          decimals: 8,
+          status: "skipped",
+          skipReason: "Not returned by the token API",
+          quotes: [],
+        },
+      ],
+    };
+
+    expect(
+      renderReport([
+        weekendA,
+        weekendB,
+        weekendNoRoute,
+        weekendError,
+        monday,
+        skipped,
+      ])
+    ).toBe(
       [
-        "4 observations, 2026-10-03T19:07:00.000Z to 2026-10-05T14:07:00.000Z.",
-        "Median deviation from Jupiter's reference price (count). Quotes, not executions.",
+        "6 observations, 2026-10-03T19:07:00.000Z to 2026-10-05T15:07:00.000Z.",
+        "Median deviation from Jupiter's reference price, with the number of successful quotes.",
+        "Negative means less USDC than the lot is worth at that price. Quotes, not executions.",
+        "1 token-run skipped (see skipReason in the data).",
         "",
-        "| Token | Lot | weekend | regular | No route |",
-        "| --- | --- | ---: | ---: | ---: |",
-        "| NVDAx | demo-lot | −2.00% (2) | +0.50% (1) | 1 of 4 |",
+        "| Token | Lot | weekend | regular | No route | Errors |",
+        "| --- | --- | ---: | ---: | ---: | ---: |",
+        "| NVDAx | demo-lot | −2.00% (2) | +0.50% (1) | 1 of 5 | 1 of 5 |",
       ].join("\n")
     );
   });
