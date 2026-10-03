@@ -18,7 +18,7 @@ For a terminal-only run, use `npm run demo:kamino`. Read [operator demo](docs/OP
 ## Verify
 
 ```sh
-npm run anchor-test   # SBF builds and 46 workspace tests
+npm run anchor-test   # SBF builds and 42 workspace tests
 npm run test:client   # typed client and fixture-manifest tests
 npm run ci            # web build, lint and formatting
 ```

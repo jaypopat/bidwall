@@ -19,7 +19,6 @@ mkdirSync("anchor/target/deploy", { recursive: true });
 // malicious_lender is a test fixture that deliberately reuses lender_harness's identity.
 for (const [name, identity] of [
   ["bidwall", "bidwall"],
-  ["vault", "vault"],
   ["lender_harness", "lender_harness"],
   ["malicious_lender", "lender_harness"],
 ]) {

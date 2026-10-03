@@ -116,7 +116,7 @@ there is no generic arbitrary-lender dispatch or silent fallback.
 ## Verification and code generation
 
 ```sh
-npm run anchor-test     # 46 workspace tests and SBF/IDL builds
+npm run anchor-test     # 42 workspace tests and SBF/IDL builds
 npm run test:client     # 6 tests, including exact fixture wire/account compatibility
 npm run demo:kamino     # fresh offline runtime and complete lifecycle
 npm run ci             # web build, lint, formatting

@@ -5,7 +5,7 @@
     "anchor-test": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml --workspace",
     "build": "next build",
     "ci": "npm run build && npm run lint && npm run format:check",
-    "codama:js": "codama run js && codama -c codama.bidwall.json run js",
+    "codama:js": "codama -c codama.bidwall.json run js",
     "dev": "next dev",
     "dev:demo": "BIDWALL_LOCAL_DEMO=1 next dev --hostname 127.0.0.1",
     "format": "prettier --write .",
@@ -20,7 +20,7 @@
     "test:client": "npm run client:build && node --test tests/client/*.test.mjs",
     "demo:kamino": "npm run anchor-build && npm run client:build && node scripts/demo/run.mjs"
   },
-  "description": "Next.js, Tailwind, @solana/kit, Anchor vault program",
+  "description": "Funded, term-bound NVDAx/USDC liquidation bids settled through Kamino",
   "keywords": [
     "anchor",
     "kit",

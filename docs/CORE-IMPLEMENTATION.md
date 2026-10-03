@@ -42,7 +42,7 @@ compatibility choices, not transaction versions.
 Generated local artifacts: `anchor/target/deploy/bidwall.so` and
 `anchor/target/idl/bidwall.json`. The declared program address is a local placeholder,
 not a verified deployment address. `--ignore-keys` is for local builds only. The old
-`vault` example and its UI/client remain separate, and are not the Bidwall interface.
+`vault` starter example was removed on 3 October 2026.
 The Anchor provider defaults to localnet.
 
 ## Program and trust boundary

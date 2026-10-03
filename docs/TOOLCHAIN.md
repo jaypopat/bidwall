@@ -14,7 +14,7 @@ read. A public deployment requires new program identities and separate configura
 The inherited AppImage variables in this development host break AVM and Rustup
 subprocess dispatch; build/test commands strip those variables. A real stack overflow
 exposed by platform-tools v1.52 was fixed by boxing the token/mint account wrappers;
-it was not suppressed. The current 46-test workspace suite passes under this toolchain.
+it was not suppressed. The current 42-test workspace suite passes under this toolchain.
 
 `lender_harness` has its own local identity. The `malicious_lender` test fixture
 deliberately reuses it so tests can load it in place of the lender.

@@ -5,7 +5,7 @@ older milestone documents explain the implementation history.
 
 | Component          | Current state                                                                                                        | What remains                                                                         |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
-| Bidwall contracts  | Funded lifecycle and external settlement implemented; 46 workspace tests pass                                        | Independent review and deployment-specific operational decisions before real funds   |
+| Bidwall contracts  | Funded lifecycle and external settlement implemented; 42 workspace tests pass                                        | Independent review and deployment-specific operational decisions before real funds   |
 | Lender harness     | Separate deployed test program plus malicious-program fixture                                                        | Retained for controlled adversarial tests                                            |
 | Kamino adapter     | Real v2 CPI verified on a mainnet fork and captured-binary replay                                                    | Support remains limited to the documented public NVDAx/USDC route                    |
 | Fresh-fork tooling | Mainnet reads, controlled local oracle stress, verified settlement, explicit fixture capture                         | Research SDK advisories remain; live state may require reselection                   |
@@ -29,6 +29,6 @@ and inspects its receipt; it does not yet let a user choose bid terms or sign st
 - **Can I run and inspect it?** [Operator demo](OPERATOR-DEMO.md) or [web console](FRONTEND.md): `npm run dev:demo`.
 - **What remains and what must we decide?** [Next milestone](NEXT-MILESTONE.md).
 
-Latest checks: 46 Rust workspace tests, 6 client/manifest tests, successful repeated
+Latest checks: 42 Rust workspace tests, 6 client/manifest tests, successful repeated
 offline demo, and web build/lint/format checks. The fork SDK advisories and production limitations are documented
 in the integration notes; passing tests do not remove those limitations.

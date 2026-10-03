@@ -127,7 +127,8 @@ Post-CPI failures explicitly check that the real lender returned success first.
 
 The original 29 workspace tests continue to cover lifecycle boundaries, withdrawal,
 cross-market allocation, direct-spend attempts and a malicious harness upgrade.
-The new replay adds 17 tests (46 workspace tests total).
+The new replay adds 17 tests (46 workspace tests total, including 4 starter `vault`
+tests removed on 3 October 2026; 42 remain).
 
 For a fresh network-dependent fork run, follow the [fixture capture instructions](../anchor/programs/bidwall/fixtures/README.md).
 The script refuses non-loopback write endpoints. Ordinary runs save ignored evidence;
