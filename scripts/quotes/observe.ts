@@ -1,3 +1,4 @@
+import { parseArgs } from "node:util";
 import type {
   JupiterClient,
   QuoteResult,
@@ -5,8 +6,9 @@ import type {
   TokenInfo,
   TokensResult,
 } from "./jupiter.ts";
-import { JUPITER_ENDPOINTS } from "./jupiter.ts";
+import { JUPITER_ENDPOINTS, createJupiterClient } from "./jupiter.ts";
 import { classifySession, newYorkClock } from "./session.ts";
+import { saveObservation } from "./store.ts";
 import {
   DEMO_LOT,
   SLIPPAGE_BPS,
@@ -174,3 +176,53 @@ function referenceOf(info: TokenInfo) {
     liquidityUsd: info.liquidityUsd === null ? null : String(info.liquidityUsd),
   };
 }
+
+const PAUSE_MS = 1_000;
+const USAGE =
+  "Usage: bun scripts/quotes/observe.ts --out <data dir> [--runner local|github-actions]";
+
+const sleep = (ms: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, ms));
+
+function parseRunner(value: string | undefined): Runner {
+  if (value === "local" || value === "github-actions") return value;
+  throw new Error(`Unknown runner "${value}". ${USAGE}`);
+}
+
+async function main() {
+  const { values } = parseArgs({
+    options: {
+      out: { type: "string" },
+      runner: { type: "string", default: "local" },
+    },
+  });
+  if (!values.out) throw new Error(USAGE);
+
+  const client = createJupiterClient({
+    fetch: (url) => fetch(url, { headers: { accept: "application/json" } }),
+    sleep,
+  });
+  const { observation, exchanges } = await runObservation({
+    client,
+    now: new Date(),
+    runner: parseRunner(values.runner),
+    pause: () => sleep(PAUSE_MS),
+  });
+  const saved = saveObservation(values.out, observation, exchanges);
+
+  console.log(
+    `${saved.observedAt} (${saved.session}, ${saved.newYorkTime}) -> ${saved.raw.path}`
+  );
+  for (const token of saved.tokens) {
+    const ok = token.quotes.filter((q) => q.status === "ok").length;
+    console.log(
+      `  ${token.symbol}: ${token.skipReason ?? `${ok}/${token.quotes.length} quotes ok`}`
+    );
+  }
+  if (countOkQuotes(saved) === 0) {
+    console.error("No quote succeeded in this run.");
+    process.exitCode = 1;
+  }
+}
+
+if (import.meta.main) await main();
