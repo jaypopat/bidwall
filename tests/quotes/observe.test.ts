@@ -155,7 +155,39 @@ describe("runObservation", () => {
     expect(token(observation, "NVDAx")?.quotes[0]).toMatchObject({
       status: "error",
       error:
-        "Quote does not match the request (asked 396422366, quoted 396422367)",
+        "Quote does not match the request: inAmount asked 396422366, quoted 396422367",
+    });
+    expect(countOkQuotes(observation)).toBe(0);
+  });
+
+  test("never records a quote for a different input token", async () => {
+    const { observe } = market({}, (_url, inAmount) =>
+      json(quoteBody("SomeOtherMint", inAmount, inAmount))
+    );
+    const { observation } = await observe();
+    expect(token(observation, "SPYx")?.quotes[0]).toMatchObject({
+      status: "error",
+      error: `Quote does not match the request: inputMint asked ${TRACKED_TOKENS[4]?.mint}, quoted SomeOtherMint`,
+    });
+  });
+
+  test("never records a quote paid in a different output token or mode", async () => {
+    const { observe } = market({}, (url, inAmount) =>
+      json({
+        ...quoteBody(
+          url.searchParams.get("inputMint") ?? "",
+          inAmount,
+          inAmount
+        ),
+        outputMint: "So11111111111111111111111111111111111111112",
+        swapMode: "ExactOut",
+      })
+    );
+    const { observation } = await observe();
+    expect(token(observation, "NVDAx")?.quotes[0]).toMatchObject({
+      status: "error",
+      error:
+        "Quote does not match the request: outputMint asked EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v, quoted So11111111111111111111111111111111111111112",
     });
     expect(countOkQuotes(observation)).toBe(0);
   });

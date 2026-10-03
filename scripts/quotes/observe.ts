@@ -1,6 +1,7 @@
 import { parseArgs } from "node:util";
 import type {
   JupiterClient,
+  Quote,
   QuoteResult,
   RawExchange,
   TokenInfo,
@@ -146,11 +147,12 @@ function toQuoteObservation(
     return { ...base, status: "error", error: result.error };
 
   const { quote } = result;
-  if (quote.inputMint !== tracked.mint || quote.inAmount !== planned.atoms)
+  const mismatch = requestMismatch(tracked, planned, quote);
+  if (mismatch)
     return {
       ...base,
       status: "error",
-      error: `Quote does not match the request (asked ${planned.atoms}, quoted ${quote.inAmount})`,
+      error: `Quote does not match the request: ${mismatch}`,
     };
 
   return {
@@ -167,6 +169,24 @@ function toQuoteObservation(
     contextSlot: quote.contextSlot,
     routeLabels: quote.routeLabels,
   };
+}
+
+/** The first field where Jupiter's quote differs from what we asked for, if any. */
+function requestMismatch(
+  tracked: TrackedToken,
+  planned: PlannedLot,
+  quote: Quote
+): string | null {
+  const expected: [field: string, asked: string, quoted: string][] = [
+    ["inputMint", tracked.mint, quote.inputMint],
+    ["outputMint", USDC.mint, quote.outputMint],
+    ["swapMode", "ExactIn", quote.swapMode],
+    ["inAmount", planned.atoms.toString(), quote.inAmount.toString()],
+  ];
+  const differing = expected.find(([, asked, quoted]) => asked !== quoted);
+  return differing
+    ? `${differing[0]} asked ${differing[1]}, quoted ${differing[2]}`
+    : null;
 }
 
 function referenceOf(info: TokenInfo) {

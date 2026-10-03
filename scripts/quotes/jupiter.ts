@@ -42,6 +42,8 @@ export type TokenInfo = {
 
 export type Quote = {
   inputMint: string;
+  outputMint: string;
+  swapMode: string;
   inAmount: bigint;
   outAmount: bigint;
   minOutAmount: bigint;
@@ -176,6 +178,8 @@ function parseQuote(value: unknown): Quote {
   const quote = readRecord(value, "quote");
   return {
     inputMint: readString(quote, "inputMint"),
+    outputMint: readString(quote, "outputMint"),
+    swapMode: readString(quote, "swapMode"),
     inAmount: readIntegerString(quote, "inAmount"),
     outAmount: readIntegerString(quote, "outAmount"),
     minOutAmount: readIntegerString(quote, "otherAmountThreshold"),

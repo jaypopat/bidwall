@@ -39,6 +39,8 @@ describe("getQuote", () => {
     if (result.status !== "ok") return;
     expect(result.quote).toEqual({
       inputMint: NVDAX,
+      outputMint: USDC.mint,
+      swapMode: "ExactIn",
       inAmount: 396_422_366n,
       outAmount: 931_322_087n,
       minOutAmount: 926_665_476n,
