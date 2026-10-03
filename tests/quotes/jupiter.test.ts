@@ -106,6 +106,27 @@ describe("getQuote", () => {
     expect(calls).toHaveLength(2);
   });
 
+  test("abandons a request that stalls, retries once, then records the timeout", async () => {
+    const http = fakeFetch(() => new Promise<Response>(() => {}));
+    const stalled: typeof http.fetch = (url, init) =>
+      new Promise((_resolve, reject) => {
+        void http.fetch(url);
+        init?.signal?.addEventListener("abort", () =>
+          reject(init.signal?.reason)
+        );
+      });
+    const jupiter = createJupiterClient({
+      fetch: stalled,
+      sleep: recordingSleep().sleep,
+      timeoutMs: 20,
+    });
+    expect(await jupiter.getQuote(request)).toMatchObject({
+      status: "error",
+      error: "Network error: timed out after 20 ms",
+    });
+    expect(http.calls).toHaveLength(2);
+  });
+
   test("rejects a 200 response with a missing amount instead of guessing", async () => {
     const body: Record<string, unknown> = quoteBody(NVDAX, 1n, 2n);
     delete body.outAmount;

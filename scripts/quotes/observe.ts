@@ -199,7 +199,8 @@ async function main() {
   if (!values.out) throw new Error(USAGE);
 
   const client = createJupiterClient({
-    fetch: (url) => fetch(url, { headers: { accept: "application/json" } }),
+    fetch: (url, init) =>
+      fetch(url, { ...init, headers: { accept: "application/json" } }),
     sleep,
   });
   const { observation, exchanges } = await runObservation({

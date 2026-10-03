@@ -16,9 +16,11 @@ export function parsePrice(usd: number): bigint {
   if (!Number.isFinite(usd) || usd <= 0 || usd >= MAX_PRICE_USD)
     throw new Error(`Unusable price: ${usd}`);
   const [whole = "0", fraction = ""] = usd.toFixed(PRICE_DECIMALS).split(".");
-  return (
-    BigInt(whole) * PRICE_SCALE + BigInt(fraction.padEnd(PRICE_DECIMALS, "0"))
-  );
+  const price =
+    BigInt(whole) * PRICE_SCALE + BigInt(fraction.padEnd(PRICE_DECIMALS, "0"));
+  // A price below 10^-12 rounds to zero and would later divide by zero.
+  if (price === 0n) throw new Error(`Unusable price: ${usd}`);
+  return price;
 }
 
 /** Raw atoms worth `usd` whole dollars at `price`, rounded down. */

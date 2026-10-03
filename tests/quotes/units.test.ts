@@ -15,7 +15,14 @@ describe("parsePrice", () => {
   });
 
   test("rejects prices that cannot be trusted", () => {
-    for (const bad of [0, -1, Number.NaN, Number.POSITIVE_INFINITY, 1e9]) {
+    for (const bad of [
+      0,
+      -1,
+      1e-13,
+      Number.NaN,
+      Number.POSITIVE_INFINITY,
+      1e9,
+    ]) {
       expect(() => parsePrice(bad)).toThrow("Unusable price");
     }
   });

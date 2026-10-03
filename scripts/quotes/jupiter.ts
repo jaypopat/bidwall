@@ -15,9 +15,13 @@ export const JUPITER_ENDPOINTS = {
 } as const;
 
 const RETRY_DELAY_MS = 3_000;
+const TIMEOUT_MS = 15_000;
 const NO_ROUTE_CODES = new Set(["NO_ROUTES_FOUND", "COULD_NOT_FIND_ANY_ROUTE"]);
 
-export type FetchLike = (url: string) => Promise<Response>;
+export type FetchLike = (
+  url: string,
+  init?: { signal?: AbortSignal }
+) => Promise<Response>;
 export type Sleep = (ms: number) => Promise<void>;
 
 /** One HTTP request and its response, kept verbatim as evidence. */
@@ -71,16 +75,29 @@ export function createJupiterClient(options: {
   fetch: FetchLike;
   sleep: Sleep;
   retryDelayMs?: number;
+  timeoutMs?: number;
 }): JupiterClient {
-  const { fetch, sleep, retryDelayMs = RETRY_DELAY_MS } = options;
+  const {
+    fetch,
+    sleep,
+    retryDelayMs = RETRY_DELAY_MS,
+    timeoutMs = TIMEOUT_MS,
+  } = options;
 
   async function attempt(url: string): Promise<RawExchange> {
     try {
-      const response = await fetch(url);
+      // The signal also bounds reading the body, so a stalled response cannot hang the run.
+      const response = await fetch(url, {
+        signal: AbortSignal.timeout(timeoutMs),
+      });
       const text = await response.text();
       return { url, status: response.status, body: parseJson(text) };
     } catch (error) {
-      return { url, status: "network-error", body: errorMessage(error) };
+      const timedOut = error instanceof Error && error.name === "TimeoutError";
+      const reason = timedOut
+        ? `timed out after ${timeoutMs} ms`
+        : errorMessage(error);
+      return { url, status: "network-error", body: reason };
     }
   }
 
