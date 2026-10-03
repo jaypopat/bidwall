@@ -13,7 +13,7 @@ older milestone documents explain the implementation history.
 | Shared client      | Generated Anchor bindings, exact units, PDA/account preparation, bounded settlement and error explanations; 6 tests  | Application state fetching, wallet wiring and simulation/confirmation UI             |
 | Keeper             | Manual transaction preparation exists                                                                                | No continuous watcher, automatic opportunity discovery or production signing service |
 | Frontend           | Bidwall console follows six live scenario stages, then shows commitment, capacity, money flow and transaction ledger | Wallet-driven bid entry, live account reads and interactive settlement review        |
-| Quote observer     | Not implemented                                                                                                      | Reproducible same-quantity observations with honest time/environment labels          |
+| Quote observer     | Hourly Jupiter quotes for five xStocks and the demo lot, labelled by market session, on the `evidence/quotes` branch | Enough weekend and trading-hours runs to cite; Kamino oracle comparison              |
 | Deployment         | Local runtimes only                                                                                                  | No mainnet or public Bidwall deployment claimed                                      |
 | Economics / demand | Still hypotheses                                                                                                     | Named operator use case, provider terms, reservation and keeper compensation         |
 

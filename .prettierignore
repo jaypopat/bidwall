@@ -13,3 +13,6 @@ pnpm-workspace.yaml
 spikes/kamino-cpi/evidence/
 
 /build/
+
+# Local agent planning scratch
+.superpowers

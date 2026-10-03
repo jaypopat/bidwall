@@ -13,6 +13,8 @@ npm run dev:demo
 
 Open <http://127.0.0.1:3000>. The console's **Run local scenario** button builds the programs and client, starts a fresh offline Surfpool runtime, uses ephemeral local test signers, runs the complete commitment and liquidation sequence, and displays the receipt. The runtime stops afterward. The API is enabled only for the loopback-bound development server; ordinary `npm run dev` does not expose execution.
 
+The [quote observer](docs/QUOTE-OBSERVER.md) records hourly mainnet exit-depth evidence.
+
 For a terminal-only run, use `npm run demo:kamino`. Read [operator demo](docs/OPERATOR-DEMO.md) for the sequence and [frontend scope](docs/FRONTEND.md) for what the browser does and does not yet operate. The [component status](docs/STATUS.md) is the quickest project map.
 
 ## Verify

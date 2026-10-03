@@ -1,0 +1,47 @@
+name: Quote observer
+
+on:
+  schedule:
+    - cron: "7 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: quote-observer
+  cancel-in-progress: false
+
+jobs:
+  observe:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Check out the observer
+        uses: actions/checkout@v4
+
+      - name: Check out the evidence branch
+        uses: actions/checkout@v4
+        with:
+          ref: evidence/quotes
+          path: evidence
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: 1.4.2
+
+      # The observer uses only node: built-ins, so no dependency install is needed.
+      - name: Observe
+        run: bun scripts/quotes/observe.ts --out evidence/quotes --runner github-actions
+
+      # Runs even when every quote failed, so outages are recorded too.
+      - name: Commit the observation
+        if: always()
+        working-directory: evidence
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add quotes
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "data: quote observation $(date -u +%Y-%m-%dT%H:%MZ)"
+          git push || (git pull --rebase && git push)
