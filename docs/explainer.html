@@ -3,698 +3,923 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Bidwall — the flow, explained</title>
+    <title>Bidwall: a buyer in escrow before the crash</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap"
+      rel="stylesheet"
+    />
     <style>
       :root {
-        --bg: #0f1612;
-        --panel: #151e19;
-        --line: #26332b;
-        --text: #dfe7e1;
-        --muted: #8fa197;
-        --accent: #7fd6a4;
-        --warn: #e8b86a;
-        --bad: #e07a6f;
-        --blue: #8ab4f0;
-        --mono: "IBM Plex Mono", ui-monospace, monospace;
+        color-scheme: light;
+        --page: #e9ecee;
+        --surface: #ffffff;
+        --ink: #141b2b;
+        --ink-2: #4a5263;
+        --ink-3: #737b8b;
+        --rule: #cdd3d9;
+        --rule-soft: #e1e5e9;
+        --usdc: #2a50d8;
+        --usdc-soft: #dfe5fb;
+        --nvda: #d7263d;
+        --nvda-soft: #f9dde1;
+        --kamino: #00978a;
+        --surplus: #e09a00;
+        --fail: #b3122a;
+        --font: "Archivo", "Arial Narrow", system-ui, sans-serif;
       }
       * {
         box-sizing: border-box;
       }
+      html {
+        scroll-behavior: smooth;
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+      }
       body {
         margin: 0;
-        background: var(--bg);
-        color: var(--text);
-        font:
-          16px/1.6 "IBM Plex Sans",
-          system-ui,
-          sans-serif;
+        background: var(--page);
+        color: var(--ink);
+        font-family: var(--font);
+        font-size: 17px;
+        line-height: 1.6;
+        font-variant-numeric: tabular-nums;
       }
       main {
-        max-width: 920px;
+        max-width: 1120px;
         margin: 0 auto;
-        padding: 56px 24px 96px;
+        padding: 64px 28px 120px;
       }
+      .prose {
+        max-width: 680px;
+      }
+      p {
+        margin: 0 0 1em;
+      }
+      a {
+        color: var(--usdc);
+      }
+      :focus-visible {
+        outline: 3px solid var(--usdc);
+        outline-offset: 2px;
+      }
+
+      /* Type: one family; the width axis does the talking. */
       h1 {
-        font-size: 2.1rem;
-        line-height: 1.2;
-        margin: 0 0 12px;
+        font-stretch: 62%;
+        font-weight: 850;
+        font-size: clamp(2.8rem, 8vw, 6rem);
+        line-height: 0.88;
+        letter-spacing: -0.01em;
+        margin: 0 0 32px;
+      }
+      h1 span {
+        display: block;
+      }
+      h1 span:nth-child(2) {
+        color: var(--usdc);
       }
       h2 {
-        font-size: 1.35rem;
-        margin: 64px 0 8px;
-        padding-top: 16px;
-        border-top: 1px solid var(--line);
-      }
-      h2 .n {
-        color: var(--accent);
-        font-family: var(--mono);
-        margin-right: 10px;
+        font-stretch: 70%;
+        font-weight: 800;
+        font-size: clamp(2rem, 4.6vw, 3.3rem);
+        line-height: 0.98;
+        margin: 128px 0 20px;
+        max-width: 820px;
       }
       h3 {
-        font-size: 1.05rem;
-        margin: 24px 0 6px;
-      }
-      p,
-      li {
-        color: var(--text);
+        font-stretch: 85%;
+        font-weight: 700;
+        font-size: 1.2rem;
+        margin: 0 0 6px;
       }
       .lede {
-        font-size: 1.15rem;
-        color: var(--muted);
-        max-width: 720px;
+        font-size: 1.3rem;
+        line-height: 1.5;
+        color: var(--ink-2);
+        max-width: 640px;
       }
-      .muted {
-        color: var(--muted);
+      .small {
+        font-size: 0.86rem;
+        color: var(--ink-3);
       }
-      code,
-      .mono {
-        font-family: var(--mono);
-        font-size: 0.88em;
+
+      /* Figures */
+      figure {
+        margin: 36px 0 0;
+        background: var(--surface);
+        border-radius: 6px;
+        padding: 28px 28px 22px;
       }
-      .callout {
-        border-left: 3px solid var(--accent);
-        background: var(--panel);
-        padding: 14px 18px;
-        margin: 20px 0;
-        border-radius: 0 6px 6px 0;
+      figure > header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: end;
+        justify-content: space-between;
+        gap: 14px 24px;
+        margin-bottom: 18px;
       }
-      .callout.warn {
-        border-color: var(--warn);
+      figure > header h3 {
+        margin: 0;
+        font-size: 1.35rem;
       }
-      .callout.bad {
-        border-color: var(--bad);
+      figcaption {
+        margin-top: 16px;
+        font-size: 0.86rem;
+        color: var(--ink-3);
+        max-width: 760px;
       }
-      .grid {
+      .wide {
+        overflow-x: auto;
+      }
+      .wide > svg {
+        min-width: 680px;
+      }
+      svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        overflow: visible;
+      }
+      svg text {
+        font-family: var(--font);
+        fill: var(--ink-2);
+      }
+
+      button {
+        font: inherit;
+        font-weight: 650;
+        font-size: 0.95rem;
+        border: 1.5px solid var(--ink);
+        background: var(--surface);
+        color: var(--ink);
+        padding: 8px 16px;
+        border-radius: 999px;
+        cursor: pointer;
+      }
+      button.primary {
+        background: var(--ink);
+        color: var(--surface);
+      }
+      button.wall {
+        background: var(--usdc);
+        border-color: var(--usdc);
+        color: #fff;
+      }
+      button:disabled {
+        cursor: not-allowed;
+        color: var(--ink-3);
+        border-color: var(--rule);
+        background: var(--surface);
+      }
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+      }
+      label.toggle {
+        display: inline-flex;
+        gap: 8px;
+        align-items: center;
+        font-size: 0.95rem;
+        cursor: pointer;
+      }
+      input[type="range"] {
+        width: 100%;
+        accent-color: var(--ink);
+      }
+
+      .readout {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 28px;
+        margin-top: 8px;
+      }
+      .readout div {
+        min-width: 120px;
+      }
+      .readout b {
+        display: block;
+        font-stretch: 70%;
+        font-weight: 800;
+        font-size: 2.4rem;
+        line-height: 1;
+      }
+      .readout span {
+        font-size: 0.86rem;
+        color: var(--ink-3);
+      }
+      .verdict {
+        font-stretch: 70%;
+        font-weight: 800;
+        font-size: clamp(3rem, 8vw, 5.5rem);
+        line-height: 0.9;
+        transition: color 0.3s;
+      }
+      .verdict.bad {
+        color: var(--nvda);
+      }
+      .verdict.good {
+        color: var(--usdc);
+      }
+
+      /* Cast */
+      .cast {
         display: grid;
-        gap: 14px;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 0 40px;
+        margin-top: 28px;
       }
-      .g2 {
-        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      .cast div {
+        padding: 18px 0 18px 22px;
+        border-top: 1px solid var(--rule);
+        position: relative;
       }
-      .g3 {
-        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      .cast div::before {
+        content: "";
+        position: absolute;
+        left: 0;
+        top: 24px;
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: var(--dot);
       }
-      .card {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px 18px;
+      .cast div.dashed::before {
+        background: none;
+        border: 2px dashed var(--ink-3);
+        width: 8px;
+        height: 8px;
       }
-      .card h3 {
-        margin-top: 0;
+      .cast p {
+        margin: 0;
+        color: var(--ink-2);
+        font-size: 0.97rem;
       }
-      .card p {
-        margin: 6px 0;
+
+      /* Crash simulator */
+      .sim {
+        display: grid;
+        grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+        gap: 36px;
+      }
+      @media (max-width: 820px) {
+        .sim {
+          grid-template-columns: 1fr;
+        }
+      }
+      .state {
+        font-stretch: 75%;
+        font-weight: 800;
+        font-size: 1.6rem;
+        line-height: 1.1;
+        margin: 4px 0 8px;
+      }
+      .state.healthy {
+        color: var(--kamino);
+      }
+      .state.gap {
+        color: var(--fail);
+      }
+      .state.fill {
+        color: var(--usdc);
+      }
+      dl.kv {
+        display: grid;
+        grid-template-columns: auto auto;
+        justify-content: space-between;
+        gap: 4px 20px;
+        margin: 14px 0 0;
         font-size: 0.95rem;
       }
-      .tag {
-        display: inline-block;
-        font-family: var(--mono);
-        font-size: 0.72rem;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        padding: 2px 8px;
-        border-radius: 99px;
-        border: 1px solid var(--line);
-        color: var(--muted);
+      dl.kv dt {
+        color: var(--ink-2);
       }
-      .tag.ok {
-        color: var(--accent);
-        border-color: var(--accent);
-      }
-      .tag.no {
-        color: var(--bad);
-        border-color: var(--bad);
-      }
-      .tag.maybe {
-        color: var(--warn);
-        border-color: var(--warn);
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin: 14px 0;
-        font-size: 0.93rem;
-      }
-      th,
-      td {
-        text-align: left;
-        padding: 8px 10px;
-        border-bottom: 1px solid var(--line);
-        vertical-align: top;
-      }
-      th {
-        color: var(--muted);
-        font-weight: 500;
-      }
-      td.num {
+      dl.kv dd {
+        margin: 0;
         text-align: right;
-        font-family: var(--mono);
+        font-weight: 650;
       }
-      .bars .row {
+
+      /* Transaction player */
+      .tx-grid {
         display: grid;
-        grid-template-columns: 70px 1fr 80px;
-        align-items: center;
-        gap: 10px;
-        margin: 6px 0;
-        font-size: 0.9rem;
+        grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr);
+        gap: 32px;
       }
-      .bars .track {
-        height: 14px;
-        background: var(--panel);
-        border-radius: 3px;
-        overflow: hidden;
-      }
-      .bars .fill {
-        height: 100%;
-        background: var(--bad);
-      }
-      .timeline {
-        display: grid;
-        grid-template-columns: repeat(6, 1fr);
-        gap: 6px;
-        margin: 18px 0;
-      }
-      .timeline div {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 6px;
-        padding: 10px;
-        font-size: 0.85rem;
-      }
-      .timeline b {
-        display: block;
-        font-family: var(--mono);
-        color: var(--accent);
-        font-size: 0.78rem;
-        margin-bottom: 4px;
-      }
-      .timeline .lock {
-        border-color: var(--warn);
-      }
-      .timeline .lock b {
-        color: var(--warn);
-      }
-      @media (max-width: 720px) {
-        .timeline {
-          grid-template-columns: repeat(2, 1fr);
+      @media (max-width: 860px) {
+        .tx-grid {
+          grid-template-columns: 1fr;
         }
       }
       ol.steps {
-        counter-reset: s;
         list-style: none;
         padding: 0;
+        margin: 0;
+        counter-reset: s;
       }
       ol.steps li {
         counter-increment: s;
+        padding: 7px 0 7px 36px;
         position: relative;
-        padding: 8px 0 8px 42px;
-        border-bottom: 1px dashed var(--line);
+        font-size: 0.93rem;
+        color: var(--ink-3);
+        border-top: 1px solid var(--rule-soft);
+        transition: color 0.2s;
       }
       ol.steps li::before {
         content: counter(s);
         position: absolute;
         left: 0;
-        top: 8px;
-        width: 28px;
-        height: 28px;
+        top: 7px;
+        width: 24px;
+        height: 24px;
         border-radius: 50%;
-        background: var(--panel);
-        border: 1px solid var(--accent);
-        color: var(--accent);
-        font-family: var(--mono);
-        font-size: 0.85rem;
+        border: 1.5px solid var(--rule);
         display: grid;
         place-items: center;
+        font-size: 0.8rem;
+        font-weight: 700;
       }
-      svg text {
-        font-family: "IBM Plex Sans", system-ui, sans-serif;
-        fill: var(--text);
+      ol.steps li.done {
+        color: var(--ink-2);
       }
-      .q li {
-        margin: 6px 0;
+      ol.steps li.done::before {
+        background: var(--ink);
+        border-color: var(--ink);
+        color: #fff;
       }
-      pre {
-        background: var(--panel);
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        padding: 16px;
-        white-space: pre-wrap;
-        font-family: var(--mono);
-        font-size: 0.85rem;
-        line-height: 1.55;
+      ol.steps li.active {
+        color: var(--ink);
+        font-weight: 600;
       }
-      nav {
-        font-size: 0.9rem;
-        color: var(--muted);
-        margin-top: 24px;
+      ol.steps li.active::before {
+        border-color: var(--usdc);
+        color: var(--usdc);
+      }
+      ol.steps li.failed {
+        color: var(--fail);
+        font-weight: 600;
+      }
+      ol.steps li.failed::before {
+        background: var(--fail);
+        border-color: var(--fail);
+        color: #fff;
+      }
+      .banner {
+        margin-top: 14px;
+        padding: 12px 16px;
+        border-radius: 4px;
+        font-weight: 600;
+        display: none;
+      }
+      .banner.show {
+        display: block;
+      }
+      .banner.ok {
+        background: var(--usdc-soft);
+        color: #1a2f80;
+      }
+      .banner.bad {
+        background: var(--nvda-soft);
+        color: #7a0f1e;
+      }
+      table.bal {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.92rem;
+        margin-top: 18px;
+      }
+      table.bal td {
+        padding: 5px 0;
+        border-top: 1px solid var(--rule-soft);
+      }
+      table.bal td:last-child {
+        text-align: right;
+        font-weight: 650;
+      }
+      .swatch {
+        display: inline-block;
+        width: 9px;
+        height: 9px;
+        border-radius: 50%;
+        margin-right: 7px;
+        vertical-align: 1px;
+      }
+
+      /* Lifecycle */
+      .life-actions {
         display: flex;
         flex-wrap: wrap;
-        row-gap: 6px;
+        gap: 10px 18px;
+        align-items: center;
+        margin-top: 14px;
       }
-      nav a {
-        color: var(--accent);
-        text-decoration: none;
-        margin-right: 14px;
+      .why {
+        font-size: 0.88rem;
+        color: var(--ink-3);
+      }
+
+      /* Economics */
+      .econ {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1.2fr);
+        gap: 36px;
+      }
+      @media (max-width: 820px) {
+        .econ {
+          grid-template-columns: 1fr;
+        }
+      }
+      .slider {
+        margin-bottom: 16px;
+      }
+      .slider label {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.95rem;
+      }
+      .slider output {
+        font-weight: 700;
+      }
+
+      /* Evidence table */
+      table.proof {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 28px;
+        font-size: 0.97rem;
+      }
+      table.proof th {
+        text-align: left;
+        font-weight: 600;
+        color: var(--ink-3);
+        font-size: 0.86rem;
+        padding: 0 12px 8px 0;
+      }
+      table.proof td {
+        padding: 12px 12px 12px 0;
+        border-top: 1px solid var(--rule);
+        vertical-align: top;
+      }
+      .st {
         white-space: nowrap;
+        font-weight: 700;
       }
-      a {
-        color: var(--accent);
+      .st.ok {
+        color: var(--usdc);
+      }
+      .st.sim {
+        color: #8a5a00;
+      }
+      .st.no {
+        color: var(--fail);
+      }
+      td.ev {
+        color: var(--ink-2);
+      }
+
+      /* Outreach */
+      .asks {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 0 40px;
+        margin-top: 24px;
+      }
+      .asks section {
+        border-top: 3px solid var(--ink);
+        padding-top: 14px;
+        margin-bottom: 28px;
+      }
+      .asks ul {
+        padding-left: 18px;
+        margin: 8px 0 0;
+      }
+      .asks li {
+        margin: 6px 0;
+        color: var(--ink-2);
+      }
+      .message {
+        background: var(--surface);
+        border-radius: 6px;
+        padding: 24px 28px;
+        margin-top: 12px;
+        white-space: pre-wrap;
+        font-family: var(--font);
+        font-size: 0.98rem;
+        line-height: 1.6;
+      }
+      ol.next {
+        padding-left: 22px;
+        max-width: 720px;
+      }
+      ol.next li {
+        margin: 10px 0;
+        padding-left: 6px;
+      }
+      ol.next li span {
+        display: block;
+        color: var(--ink-3);
+        font-size: 0.93rem;
+      }
+
+      details summary {
+        cursor: pointer;
+        font-size: 0.88rem;
+        color: var(--ink-2);
+        margin-top: 12px;
+      }
+      details table {
+        border-collapse: collapse;
+        font-size: 0.88rem;
+        margin-top: 8px;
+      }
+      details td,
+      details th {
+        padding: 4px 14px 4px 0;
+        text-align: right;
+        border-top: 1px solid var(--rule-soft);
+      }
+      details th:first-child,
+      details td:first-child {
+        text-align: left;
+      }
+
+      .tip {
+        position: fixed;
+        pointer-events: none;
+        background: var(--ink);
+        color: #fff;
+        font-size: 0.85rem;
+        padding: 6px 10px;
+        border-radius: 4px;
+        opacity: 0;
+        transition: opacity 0.1s;
+        z-index: 10;
+        white-space: nowrap;
       }
     </style>
   </head>
   <body>
+    <div class="tip" id="tip" role="status" aria-live="polite"></div>
     <main>
-      <p class="tag">Bidwall · flow explainer · 3 October 2026</p>
+      <!-- Hero -->
       <h1>
-        A buyer that can't disappear when a tokenized-stock loan has to be
-        liquidated
+        <span>Liquidations need a buyer.</span>
+        <span>Bidwall escrows one</span>
+        <span>before the crash.</span>
       </h1>
       <p class="lede">
-        Bidwall lets a capital provider lock USDC into a fixed-price, fixed-term
-        bid for NVDAx collateral. When a Kamino loan backed by NVDAx becomes
-        liquidatable, that bid can repay the debt and receive the collateral in
-        a single atomic transaction.
+        People borrow USDC against tokenized stocks like NVDAx on Kamino. When
+        the stock falls, that collateral has to be sold fast, into a market far
+        thinner than the price suggests. Bidwall lets a capital provider lock
+        USDC into a fixed-price bid that can't be cancelled, so the collateral
+        already has a buyer when it needs one.
       </p>
-      <nav>
-        <a href="#problem">1 · Problem</a><a href="#cast">2 · Who's involved</a
-        ><a href="#compare">3 · Without vs with</a
-        ><a href="#lifecycle">4 · Bid lifecycle</a
-        ><a href="#tx">5 · The transaction</a
-        ><a href="#fill">6 · When it fills</a
-        ><a href="#proof">7 · What's proven</a
-        ><a href="#econ">8 · The open question</a
-        ><a href="#outreach">9 · Vetting with Superteam</a
-        ><a href="#next">10 · Next steps</a>
-      </nav>
 
-      <!-- 1 -->
-      <h2 id="problem"><span class="n">01</span>The problem</h2>
-      <p>
-        On Kamino you can deposit tokenized stocks such as NVDAx as collateral
-        and borrow USDC against them. When the stock falls far enough, the loan
-        becomes <b>liquidatable</b>: someone repays part of the debt and takes
-        collateral at a discount (the liquidation bonus). That "someone" is a
-        liquidator bot, which normally sells the collateral straight away on a
-        DEX to lock in its profit.
-      </p>
-      <p>
-        That works only if the collateral can actually be sold. Kamino values
-        NVDAx with an oracle price, but the oracle tells you what the stock is
-        <i>worth</i>, not how much of it the on-chain market can <i>absorb</i>.
-        Our 20 September Jupiter quote snapshot (indicative quotes only, nothing
-        executed) showed:
-      </p>
-      <div class="bars card">
-        <div class="row">
-          <span class="mono">$100k</span>
-          <div class="track"><div class="fill" style="width: 0.2%"></div></div>
-          <span class="mono">+0.04%</span>
+      <figure id="hero">
+        <header>
+          <h3>Where does $1M of liquidated NVDAx go?</h3>
+          <div class="controls">
+            <button class="primary" id="sell-dex">Sell into the DEX</button>
+            <button class="wall" id="sell-wall">Sell into a Bidwall</button>
+          </div>
+        </header>
+        <div class="wide">
+          <svg
+            id="ladder"
+            viewBox="0 0 1000 440"
+            aria-label="Order book ladder"
+          ></svg>
         </div>
-        <div class="row">
-          <span class="mono">$250k</span>
-          <div class="track"><div class="fill" style="width: 1.2%"></div></div>
-          <span class="mono">−0.39%</span>
+        <div class="readout" aria-live="polite">
+          <div>
+            <span>Average sale price versus spot</span>
+            <div class="verdict" id="avg">0.00%</div>
+          </div>
+          <div>
+            <span>Sold so far</span>
+            <b id="sold">$0</b>
+          </div>
+          <div>
+            <span>Worst fill</span>
+            <b id="worst">0.0%</b>
+          </div>
         </div>
-        <div class="row">
-          <span class="mono">$500k</span>
-          <div class="track"><div class="fill" style="width: 8%"></div></div>
-          <span class="mono">−2.73%</span>
-        </div>
-        <div class="row">
-          <span class="mono">$1M</span>
-          <div class="track"><div class="fill" style="width: 100%"></div></div>
-          <span class="mono">−33.85%</span>
-        </div>
-        <p class="muted" style="font-size: 0.82rem; margin-top: 10px">
-          NVDAx sell quotes versus Jupiter spot price by size. Bar widths are
-          scaled to the $1M figure. Other xStocks looked worse: METAx quoted
-          −76.6% at $1M.
+        <figcaption>
+          Each bar is buy-side depth at a price below spot. Levels are fitted so
+          that selling into them reproduces our 20 September Jupiter quote
+          snapshot at $100k, $250k, $500k and $1M (quotes, nothing executed).
+          The wall is illustrative: $1M of escrowed USDC bidding 4% below spot.
+        </figcaption>
+      </figure>
+
+      <!-- Problem -->
+      <h2 id="problem">The price is reliable. The exit isn't.</h2>
+      <div class="prose">
+        <p>
+          Kamino values NVDAx with an oracle price. That tells you what the
+          stock is worth, not how much of it the on-chain market can absorb.
+          When a loan becomes liquidatable, a liquidator repays part of the
+          debt, takes collateral at a small discount (the liquidation bonus),
+          and normally sells it straight away. If that sale would lose more than
+          the bonus, nobody liquidates, and the lender carries bad debt.
         </p>
       </div>
-      <div class="callout warn">
-        <b>Why it matters:</b> if a large NVDAx position has to be liquidated
-        and the only exit is a thin DEX pool, liquidators may decline
-        (unprofitable) or sell at a large loss. If no one liquidates in time,
-        the lender is left with <b>bad debt</b>. Bidwall's answer is to arrange
-        a buyer in advance, with funds locked, before the crash happens.
-      </div>
-      <p class="muted">
-        Caveat: Kamino doesn't have to dump a whole $1M position in one trade.
-        Partial liquidations and auctions exist. The quote table is a signal
-        worth investigating, not proof that lenders lose those amounts.
-      </p>
+      <figure>
+        <header>
+          <h3>Sell-quote deviation by order size, five xStocks</h3>
+          <span class="small">Hover a line or point</span>
+        </header>
+        <div class="wide">
+          <svg
+            id="slip"
+            viewBox="0 0 1000 400"
+            aria-label="Slippage by order size"
+          ></svg>
+        </div>
+        <figcaption>
+          Jupiter quotes against Jupiter spot, 20 September 2026. Quotes only,
+          nothing executed. Kamino needn't sell a whole $1M position in one go
+          (partial liquidations and auctions exist), so this is a signal worth
+          investigating, not a measured lender loss. SPYx stays near spot at
+          every size.
+        </figcaption>
+        <details>
+          <summary>Show as a table</summary>
+          <table id="slip-table"></table>
+        </details>
+      </figure>
 
-      <!-- 2 -->
-      <h2 id="cast"><span class="n">02</span>Who's involved</h2>
-      <div class="grid g3">
-        <div class="card">
-          <span class="tag">Borrower</span>
-          <h3>Has the loan</h3>
+      <!-- Cast -->
+      <h2 id="cast">Five parties, one transaction</h2>
+      <div class="cast">
+        <div style="--dot: var(--surplus)">
+          <h3>Borrower</h3>
           <p>
-            Deposited NVDAx and borrowed USDC on Kamino. Gets liquidated if
-            NVDAx falls too far. Under Bidwall, the borrower receives any
-            surplus from the fixed bid price.
+            Deposited NVDAx, borrowed USDC. Gets liquidated when NVDAx falls far
+            enough. With Bidwall, the borrower also receives any surplus from
+            the fixed bid price.
           </p>
         </div>
-        <div class="card">
-          <span class="tag">Lender</span>
-          <h3>Kamino Lend v2</h3>
+        <div style="--dot: var(--kamino)">
+          <h3>Kamino</h3>
           <p>
-            Decides whether a loan is liquidatable, how much debt can be repaid
-            and how much collateral is released. Bidwall
-            <b>never overrides</b> these rules. It calls Kamino's own
-            liquidation instruction.
+            The lender. Decides if a loan is liquidatable, how much debt is
+            repaid and how much collateral is released. Bidwall calls Kamino's
+            own liquidation and never overrides those rules.
           </p>
         </div>
-        <div class="card">
-          <span class="tag ok">Provider</span>
-          <h3>Funds the bid</h3>
+        <div style="--dot: var(--usdc)">
+          <h3>Provider</h3>
           <p>
-            A market maker or specialist fund. Locks USDC, for example: "up to
-            10 NVDAx at $150, until Friday." Can't withdraw or reprice until the
-            bid expires. Receives NVDAx when the bid fills.
+            A market maker or fund. Locks USDC in a bid such as "up to 10 NVDAx
+            at $150 until Friday", can't withdraw or reprice until expiry, and
+            receives NVDAx when the bid fills.
           </p>
         </div>
-        <div class="card">
-          <span class="tag">Keeper</span>
-          <h3>Pulls the trigger</h3>
+        <div style="--dot: var(--ink)">
+          <h3>Keeper</h3>
           <p>
-            Spots a liquidatable loan and submits the settlement transaction.
-            Bidwall only lets the keeper named on the market do this, and the
-            keeper can't redirect any funds.
+            Spots a liquidatable loan and submits the transaction. Only the
+            keeper named on the market can, and it can't redirect any money.
           </p>
         </div>
-        <div class="card">
-          <span class="tag maybe">Curator / risk team</span>
-          <h3>Possibly pays for it</h3>
+        <div class="dashed">
+          <h3>Curator</h3>
           <p>
-            Whoever runs the lending market. The hypothesis is that they'd pay a
-            fee to have guaranteed buyers on standby. <b>Unvalidated.</b>
+            Runs the lending market. The hypothesis is that they'd pay a fee to
+            keep buyers on standby. Nobody has confirmed this yet.
           </p>
         </div>
-        <div class="card">
-          <span class="tag">Bidwall</span>
-          <h3>The program</h3>
+        <div style="--dot: var(--nvda)">
+          <h3>NVDAx</h3>
           <p>
-            Holds escrow, enforces the lock, checks every token movement and
-            makes the whole liquidation all-or-nothing.
-          </p>
-        </div>
-      </div>
-
-      <!-- 3 -->
-      <h2 id="compare"><span class="n">03</span>Without vs with Bidwall</h2>
-      <div class="grid g2">
-        <div class="card">
-          <span class="tag no">Today</span>
-          <ol>
-            <li>NVDAx crashes, and the loan becomes liquidatable.</li>
-            <li>
-              A liquidator weighs it up: "Can I sell the seized NVDAx for more
-              than I repay?"
-            </li>
-            <li>
-              With thin DEX depth and a large size, the answer may be
-              <b>no</b>, so no one acts, or someone acts and dumps into the
-              pool.
-            </li>
-            <li>The loan sits underwater and Kamino risks bad debt.</li>
-          </ol>
-        </div>
-        <div class="card">
-          <span class="tag ok">With Bidwall</span>
-          <ol>
-            <li>
-              Days earlier, a provider locked 1,500 USDC to buy NVDAx at a fixed
-              price.
-            </li>
-            <li>NVDAx crashes, and the loan becomes liquidatable.</li>
-            <li>
-              The keeper submits one transaction: the escrow repays the debt and
-              the NVDAx goes to the provider. No DEX sale is needed.
-            </li>
-            <li>
-              The debt is repaid, the borrower receives any surplus, and the
-              provider holds the NVDAx and can exit slowly.
-            </li>
-          </ol>
-        </div>
-      </div>
-      <div class="callout">
-        <b>The core idea:</b> the bid replaces the forced DEX sale. The provider
-        absorbs the price risk and exits on its own schedule, and collateral
-        never has to hit a thin pool during a crash. Funds are escrowed
-        on-chain, so the buyer can't pull out at the worst moment.
-      </div>
-
-      <!-- 4 -->
-      <h2 id="lifecycle"><span class="n">04</span>Bid lifecycle</h2>
-      <div class="timeline">
-        <div><b>create</b>Terms: market, price, quantity, start, expiry</div>
-        <div><b>fund</b>Provider deposits the maximum USDC cost</div>
-        <div><b>activate</b>Bid becomes live and locked</div>
-        <div class="lock">
-          <b>locked window</b>No cancel, no reprice, no withdrawal
-        </div>
-        <div><b>settle ×N</b>Each liquidation consumes some capacity</div>
-        <div><b>expire → withdraw</b>Provider reclaims unused USDC</div>
-      </div>
-      <p>
-        Bid terms are explicit integers. Price is stored as
-        <span class="mono">USDC atoms per 10⁸ raw NVDAx atoms</span>. NVDAx is a
-        Token-2022 token with a UI multiplier, so "raw units" and "shares on
-        screen" can differ. Every receipt uses raw units. A bid can be filled
-        partially several times until it is exhausted or expires.
-      </p>
-
-      <!-- 5 -->
-      <h2 id="tx"><span class="n">05</span>Inside the one transaction</h2>
-      <p>
-        These are the actual numbers from the local demo, a real Kamino loan
-        captured from mainnet and replayed offline with the oracle pushed down
-        from 225 to 150:
-      </p>
-      <svg
-        viewBox="0 0 860 330"
-        width="100%"
-        role="img"
-        aria-label="Settlement money flow"
-      >
-        <defs>
-          <marker
-            id="ah"
-            viewBox="0 0 10 10"
-            refX="9"
-            refY="5"
-            markerWidth="7"
-            markerHeight="7"
-            orient="auto"
-          >
-            <path d="M0,0 L10,5 L0,10 z" fill="#8fa197" />
-          </marker>
-        </defs>
-        <g font-size="13">
-          <rect
-            x="10"
-            y="20"
-            width="200"
-            height="90"
-            rx="8"
-            fill="#151e19"
-            stroke="#7fd6a4"
-          />
-          <text x="24" y="46" font-weight="600">Bid escrow</text>
-          <text x="24" y="68" fill="#8fa197">1,500.000000 USDC locked</text>
-          <text x="24" y="90" fill="#8fa197">capacity 10 × 10⁸ raw NVDAx</text>
-
-          <rect
-            x="330"
-            y="20"
-            width="200"
-            height="90"
-            rx="8"
-            fill="#151e19"
-            stroke="#8ab4f0"
-          />
-          <text x="344" y="46" font-weight="600">Kamino (lender)</text>
-          <text x="344" y="68" fill="#8fa197">checks loan is unhealthy</text>
-          <text x="344" y="90" fill="#8fa197">applies its own bonus/fees</text>
-
-          <rect
-            x="650"
-            y="20"
-            width="200"
-            height="90"
-            rx="8"
-            fill="#151e19"
-            stroke="#7fd6a4"
-          />
-          <text x="664" y="46" font-weight="600">Provider</text>
-          <text x="664" y="68" fill="#8fa197">receives collateral</text>
-
-          <rect
-            x="330"
-            y="220"
-            width="200"
-            height="90"
-            rx="8"
-            fill="#151e19"
-            stroke="#e8b86a"
-          />
-          <text x="344" y="246" font-weight="600">Borrower</text>
-          <text x="344" y="268" fill="#8fa197">receives the surplus</text>
-
-          <rect
-            x="10"
-            y="220"
-            width="200"
-            height="90"
-            rx="8"
-            fill="#151e19"
-            stroke="#26332b"
-          />
-          <text x="24" y="246" font-weight="600">Escrow after fill</text>
-          <text x="24" y="268" fill="#8fa197">905.37 USDC left</text>
-          <text x="24" y="290" fill="#8fa197">withdrawable after expiry</text>
-
-          <line
-            x1="210"
-            y1="55"
-            x2="328"
-            y2="55"
-            stroke="#8fa197"
-            marker-end="url(#ah)"
-          />
-          <text x="216" y="44" fill="#7fd6a4">566.38 USDC</text>
-          <text x="216" y="78" fill="#8fa197" font-size="11">
-            debt repayment
-          </text>
-
-          <line
-            x1="530"
-            y1="55"
-            x2="648"
-            y2="55"
-            stroke="#8fa197"
-            marker-end="url(#ah)"
-          />
-          <text x="536" y="44" fill="#7fd6a4">396,422,366 raw</text>
-          <text x="536" y="78" fill="#8fa197" font-size="11">NVDAx atoms</text>
-
-          <line
-            x1="160"
-            y1="110"
-            x2="360"
-            y2="218"
-            stroke="#8fa197"
-            marker-end="url(#ah)"
-          />
-          <text x="300" y="160" fill="#e8b86a">28.26 USDC</text>
-          <text x="300" y="176" fill="#8fa197" font-size="11">
-            price × qty − repayment
-          </text>
-
-          <line
-            x1="110"
-            y1="110"
-            x2="110"
-            y2="218"
-            stroke="#26332b"
-            stroke-dasharray="4 4"
-            marker-end="url(#ah)"
-          />
-          <text x="560" y="250" fill="#8fa197" font-size="12">
-            Bid price: 150 USDC per 10⁸ raw
-          </text>
-          <text x="560" y="270" fill="#8fa197" font-size="12">
-            3.964 × 150 = 594.63 USDC total
-          </text>
-          <text x="560" y="290" fill="#8fa197" font-size="12">
-            = 566.38 repay + 28.26 surplus
-          </text>
-        </g>
-      </svg>
-      <h3>Step by step (all one transaction)</h3>
-      <ol class="steps">
-        <li>
-          The keeper adds Kamino's own <b>refresh</b> instructions so the
-          reserve, oracle and loan data are current.
-        </li>
-        <li>
-          Bidwall checks the bid is active, inside its time window, called by
-          the authorised keeper, and quoted against the
-          <b>current</b> bid and loan state, which blocks replays.
-        </li>
-        <li>
-          Up to <code>max_repay</code> USDC moves from escrow to a Bidwall-owned
-          liquidator account. Kamino never gets control of the escrow.
-        </li>
-        <li>
-          Bidwall calls Kamino's real
-          <code>liquidate_obligation_and_redeem_reserve_collateral_v2</code>.
-          Kamino rejects healthy loans and stale prices on its own.
-        </li>
-        <li>
-          Bidwall measures what actually happened: the debt went down, the
-          collateral came out, and nothing is stuck in the middle.
-        </li>
-        <li>
-          It prices the NVDAx actually delivered at the fixed bid price. If that
-          doesn't cover the repayment, the transaction
-          <b>reverts</b>.
-        </li>
-        <li>
-          NVDAx goes to the provider, the surplus to the borrower, and unused
-          repay budget back to escrow.
-        </li>
-        <li>
-          Capacity is reduced and an event is emitted. If any check fails,
-          <b>everything</b> rolls back, including Kamino's part.
-        </li>
-      </ol>
-
-      <!-- 6 -->
-      <h2 id="fill"><span class="n">06</span>When does a bid actually fill?</h2>
-      <p>
-        A fill happens only if
-        <b>bid price × collateral released ≥ debt repaid</b>. Kamino releases
-        collateral worth roughly <i>repayment × (1 + bonus)</i> at the oracle
-        price. In the demo 594.63 / 566.38 ≈ 1.05, so the bonus (net of Kamino
-        fees) was about 5%. That means the bid can fill only when it is
-        <b>no more than about 5% below the oracle</b>.
-      </p>
-      <div class="grid g2">
-        <div class="card">
-          <h3>Who keeps the liquidation bonus?</h3>
-          <p>
-            With an ordinary liquidator, the liquidator keeps the bonus. With
-            Bidwall, the provider pays its fixed price and any amount above the
-            debt goes back to the <b>borrower</b>. The provider earns from
-            buying below where NVDAx later trades, not from the bonus.
-          </p>
-        </div>
-        <div class="card">
-          <h3>It's an option the provider gives away</h3>
-          <p>
-            The bid is used only when NVDAx has crashed and the oracle is near
-            the bid price, which is exactly when the provider would rather not
-            buy. This is the business's central tension. Someone has to pay the
-            provider to keep that option open.
+            The collateral: tokenized Nvidia stock (Token-2022, 8 decimals).
+            Shown in red wherever it moves on this page.
           </p>
         </div>
       </div>
-      <div class="callout">
-        <b>Where Bidwall wins:</b> large liquidations in thin markets, where an
-        ordinary liquidator can't sell the seized collateral profitably. When
-        DEX depth is fine, ordinary liquidators take the loan first and Bidwall
-        isn't needed. Bidwall is the <b>buyer of last resort</b>, not a
-        replacement for liquidators.
+
+      <!-- Crash simulator -->
+      <h2 id="crash">Crash the price and watch what the bid does</h2>
+      <div class="prose">
+        <p>
+          A bid only fills if the collateral Kamino releases, priced at the bid,
+          covers the debt being repaid. Drag the oracle price down. The loan
+          below is illustrative but tuned to the demo: a 5% bonus, a $150 bid
+          and 1,500 USDC in escrow.
+        </p>
+      </div>
+      <figure>
+        <header>
+          <h3>NVDAx oracle price</h3>
+          <div class="controls">
+            <button id="crash-play" class="primary">Play a crash</button>
+            <button id="crash-reset">Reset</button>
+          </div>
+        </header>
+        <div class="sim">
+          <div>
+            <svg id="zones" viewBox="0 0 600 120" aria-hidden="true"></svg>
+            <input
+              type="range"
+              id="price"
+              min="100"
+              max="240"
+              step="0.5"
+              value="225"
+              aria-label="NVDAx oracle price in USDC"
+            />
+            <div class="readout">
+              <div>
+                <span>Oracle price</span>
+                <b id="p-out">$225.00</b>
+              </div>
+              <div>
+                <span>Loan-to-value</span>
+                <b id="ltv-out">48.9%</b>
+              </div>
+            </div>
+            <svg id="ltvbar" viewBox="0 0 600 64" aria-hidden="true"></svg>
+          </div>
+          <div aria-live="polite">
+            <span class="small">Outcome</span>
+            <div class="state healthy" id="state">Healthy loan</div>
+            <p
+              id="state-why"
+              style="color: var(--ink-2); font-size: 0.97rem"
+            ></p>
+            <svg id="split" viewBox="0 0 420 92" aria-hidden="true"></svg>
+            <dl class="kv" id="kv"></dl>
+          </div>
+        </div>
+        <figcaption>
+          Loan: 10 NVDAx collateral, 1,100 USDC debt, liquidatable above 66.7%
+          LTV (below $165). Each liquidation repays half the debt (550 USDC) and
+          releases collateral worth 105% of it at the oracle price. Bid: $150
+          per NVDAx, 10 NVDAx capacity, 1,500 USDC escrow. Kamino's real bonus
+          varies with loan health; this model holds it fixed.
+        </figcaption>
+      </figure>
+      <div class="prose" style="margin-top: 28px">
+        <p>
+          Watch the provider's value at the oracle price. Below $150 the
+          provider pays more than the oracle says NVDAx is worth, and the
+          borrower keeps the difference. That's the option the provider gives
+          away: the bid fills exactly when the provider would rather not buy. A
+          reservation fee has to pay for it.
+        </p>
       </div>
 
-      <!-- 7 -->
-      <h2 id="proof"><span class="n">07</span>What's proven and what isn't</h2>
-      <table>
+      <!-- Transaction player -->
+      <h2 id="tx">One transaction, all or nothing</h2>
+      <div class="prose">
+        <p>
+          These are the real figures from the local demo: a real Kamino loan
+          captured from mainnet, replayed offline, with the oracle pushed from
+          225 to 150. Step through it, then break it.
+        </p>
+      </div>
+      <figure>
+        <header>
+          <h3>Settlement through Kamino v2</h3>
+          <div class="controls">
+            <button class="primary" id="tx-play">Play</button>
+            <button id="tx-step">Next step</button>
+            <button id="tx-reset">Reset</button>
+            <label class="toggle"
+              ><input type="checkbox" id="tx-break" /> Set the bid to $140 so
+              step 6 fails</label
+            >
+          </div>
+        </header>
+        <div class="tx-grid">
+          <div>
+            <svg id="txsvg" viewBox="0 0 640 380" aria-label="Money flow"></svg>
+            <div class="banner" id="tx-banner" aria-live="polite"></div>
+          </div>
+          <div>
+            <ol class="steps" id="tx-steps">
+              <li>
+                Keeper adds Kamino's refresh instructions so prices and loan
+                data are current.
+              </li>
+              <li>
+                Bidwall checks the bid is active, in its window, called by the
+                named keeper and quoted against current state.
+              </li>
+              <li>
+                Up to 566.38 USDC moves from escrow to a Bidwall-owned
+                liquidator account.
+              </li>
+              <li>
+                Bidwall calls Kamino's real liquidation. Kamino takes the
+                repayment and releases 3.964 NVDAx.
+              </li>
+              <li>
+                Bidwall measures what moved: debt down, collateral out, nothing
+                stuck in between.
+              </li>
+              <li id="step6">
+                Price the NVDAx at the bid: 3.964 × $150 = 594.63 USDC, enough
+                to cover 566.38.
+              </li>
+              <li>
+                NVDAx goes to the provider; 28.26 USDC surplus goes to the
+                borrower.
+              </li>
+              <li>Capacity drops and a settlement event is emitted.</li>
+            </ol>
+            <table class="bal" aria-live="polite">
+              <tr>
+                <td>
+                  <span class="swatch" style="background: var(--usdc)"></span
+                  >Escrow
+                </td>
+                <td id="b-escrow">1,500.00 USDC</td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="swatch" style="background: var(--kamino)"></span
+                  >Loan debt repaid
+                </td>
+                <td id="b-debt">0.00 USDC</td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="swatch" style="background: var(--nvda)"></span
+                  >Provider receives
+                </td>
+                <td id="b-prov">0.000 NVDAx</td>
+              </tr>
+              <tr>
+                <td>
+                  <span class="swatch" style="background: var(--surplus)"></span
+                  >Borrower surplus
+                </td>
+                <td id="b-borr">0.00 USDC</td>
+              </tr>
+            </table>
+          </div>
+        </div>
+        <figcaption>
+          NVDAx amounts are in units of 10<sup>8</sup> raw atoms (396,422,366
+          raw atoms delivered). NVDAx has a UI multiplier, so this can differ
+          from the share count a wallet displays. If any check fails, the whole
+          transaction reverts, including Kamino's part.
+        </figcaption>
+      </figure>
+
+      <!-- Lifecycle -->
+      <h2 id="life">A bid's life: locked, then free</h2>
+      <div class="prose">
+        <p>
+          A provider creates and funds a bid, then it activates and locks.
+          During the window it can't be cancelled, repriced or withdrawn.
+          Liquidations consume capacity. After expiry the provider takes back
+          what's left. Drag through the week.
+        </p>
+      </div>
+      <figure>
+        <header>
+          <h3>Escrow balance over the bid's term</h3>
+          <span class="small" id="day-out">Day 0</span>
+        </header>
+        <div class="wide">
+          <svg id="lifesvg" viewBox="0 0 1000 256" aria-hidden="true"></svg>
+        </div>
+        <input
+          type="range"
+          id="day"
+          min="0"
+          max="10"
+          step="0.05"
+          value="0"
+          aria-label="Day of the bid's term"
+        />
+        <div class="life-actions">
+          <strong id="life-state">Created and funded</strong>
+          <button id="act-withdraw" disabled>Withdraw unused USDC</button>
+          <button id="act-cancel" disabled>Cancel bid</button>
+          <button id="act-reprice" disabled>Change price</button>
+          <span class="why" id="life-why"></span>
+        </div>
+        <figcaption>
+          Illustrative timing: active from day 1, one fill on day 4 (the demo's
+          594.63 USDC), expiry on day 8. Cancel and reprice don't exist while a
+          bid is active, and that restriction is the product.
+        </figcaption>
+      </figure>
+
+      <!-- Evidence -->
+      <h2 id="proof">What's proven, what's simulated, what's missing</h2>
+      <table class="proof">
         <tr>
           <th>Claim</th>
           <th>Status</th>
@@ -702,245 +927,1507 @@
         </tr>
         <tr>
           <td>
-            Funded bid lifecycle (create, fund, lock, fill, expire, withdraw)
+            Funded bid lifecycle: create, fund, lock, fill, expire, withdraw
           </td>
-          <td><span class="tag ok">proven</span></td>
-          <td>42 Rust tests, including adversarial ones</td>
+          <td class="st ok">✓ Proven</td>
+          <td class="ev">42 Rust tests, including adversarial cases</td>
+        </tr>
+        <tr>
+          <td>Settles through Kamino's real v2 liquidation, not a mock</td>
+          <td class="st ok">✓ Proven</td>
+          <td class="ev">
+            Mainnet fork, plus offline replay of the captured Kamino binaries
+          </td>
+        </tr>
+        <tr>
+          <td>Any failure rolls back everything</td>
+          <td class="st ok">✓ Proven</td>
+          <td class="ev">
+            Failure tests compare every account before and after
+          </td>
         </tr>
         <tr>
           <td>
-            Settles through <b>real</b> Kamino v2 liquidation (not a mock)
+            Replay, overfill, wrong mint and unauthorised keeper are blocked
           </td>
-          <td><span class="tag ok">proven</span></td>
-          <td>Mainnet fork plus offline replay of captured Kamino binaries</td>
+          <td class="st ok">✓ Proven</td>
+          <td class="ev">Dedicated tests</td>
         </tr>
         <tr>
-          <td>Atomic rollback on any failure</td>
-          <td><span class="tag ok">proven</span></td>
-          <td>Before/after account comparison in failure tests</td>
-        </tr>
-        <tr>
-          <td>
-            Replay, overfill, wrong-mint and unauthorised-keeper attacks blocked
+          <td>One-click demo with a verified receipt</td>
+          <td class="st ok">✓ Proven</td>
+          <td class="ev">
+            <code>npm run dev:demo</code>, passing as of 3 October
           </td>
-          <td><span class="tag ok">proven</span></td>
-          <td>Dedicated tests</td>
         </tr>
         <tr>
-          <td>One-click demo with verified receipt</td>
-          <td><span class="tag ok">proven</span></td>
-          <td><code>npm run dev:demo</code></td>
-        </tr>
-        <tr>
-          <td>The crash scenario</td>
-          <td><span class="tag maybe">simulated</span></td>
-          <td>
+          <td>The crash itself</td>
+          <td class="st sim">~ Simulated</td>
+          <td class="ev">
             Oracle pushed down locally. The loan, reserves and binaries are real
           </td>
         </tr>
         <tr>
-          <td>Users can enter their own bids with a wallet</td>
-          <td><span class="tag no">not built</span></td>
-          <td>Console is a scripted launcher</td>
+          <td>Users enter their own bids with a wallet</td>
+          <td class="st no">✕ Not built</td>
+          <td class="ev">The console runs a scripted scenario</td>
         </tr>
         <tr>
-          <td>Live comparison quote for the same size</td>
-          <td><span class="tag no">not built</span></td>
-          <td>Quote observer is outstanding</td>
+          <td>Live same-size DEX quote next to the bid</td>
+          <td class="st no">✕ Not built</td>
+          <td class="ev">Quote observer still to do</td>
         </tr>
         <tr>
-          <td>Deployed on mainnet or devnet</td>
-          <td><span class="tag no">no</span></td>
-          <td>Local only. Devnet can't reproduce the Kamino market</td>
+          <td>Deployed to mainnet or devnet</td>
+          <td class="st no">✕ No</td>
+          <td class="ev">
+            Local only. Devnet can't reproduce the Kamino market
+          </td>
         </tr>
         <tr>
           <td>A market maker would fund bids on useful terms</td>
-          <td><span class="tag no">unvalidated</span></td>
-          <td><b>No conversations yet</b></td>
+          <td class="st no">✕ Unvalidated</td>
+          <td class="ev">No conversations yet</td>
         </tr>
         <tr>
           <td>A curator or lender would pay for this capacity</td>
-          <td><span class="tag no">unvalidated</span></td>
-          <td><b>No conversations yet</b></td>
+          <td class="st no">✕ Unvalidated</td>
+          <td class="ev">No conversations yet</td>
         </tr>
       </table>
 
-      <!-- 8 -->
-      <h2 id="econ"><span class="n">08</span>The open question</h2>
-      <div class="callout bad">
-        <b>
-          Will someone pay enough for a non-cancellable liquidation bid that a
-          provider will supply it on useful terms?
-        </b>
+      <!-- Economics -->
+      <h2 id="econ">The question that decides whether this is a business</h2>
+      <div class="prose">
+        <p>
+          Will someone pay enough for a bid that can't be cancelled that a
+          provider will supply it on useful terms? Locked capital has a cost.
+          Liquidations are rare, so trading income alone rarely covers it. Move
+          the numbers and see what reservation fee would close the gap.
+        </p>
       </div>
-      <p>Illustration from the brief, not a market quote:</p>
-      <ul>
-        <li>
-          $2M locked for a year at an 8% cost of capital costs <b>$160k</b>.
-        </li>
-        <li>
-          At a 3% spread, that needs about <b>$5.3M of fills a year</b> just to
-          break even, before losses and hedging.
-        </li>
-        <li>
-          Liquidations are rare, so trading income alone probably doesn't cover
-          it. A <b>reservation fee</b> paid by someone (the lender, curator or
-          vault) is likely needed.
-        </li>
-      </ul>
-      <p>
-        Precedent: B.Protocol ran funded liquidation backstops on Ethereum, so
-        the category isn't new. Bidwall's specific angle is term-locked,
-        asset-specific capacity that anyone can inspect, plugged directly into
-        Kamino's liquidation path for tokenized equities.
-      </p>
-      <p class="muted">
-        If a market maker and a curator both say "no", Bidwall is still solid
-        infrastructure research and a strong hackathon technical submission. It
-        just isn't a validated business.
-      </p>
+      <figure>
+        <header>
+          <h3>Provider economics for one year</h3>
+        </header>
+        <div class="econ">
+          <div>
+            <div class="slider">
+              <label for="e-cap"
+                >USDC locked <output id="e-cap-o"></output
+              ></label>
+              <input
+                type="range"
+                id="e-cap"
+                min="100000"
+                max="5000000"
+                step="100000"
+                value="2000000"
+              />
+            </div>
+            <div class="slider">
+              <label for="e-hurdle"
+                >Provider's cost of capital <output id="e-hurdle-o"></output
+              ></label>
+              <input
+                type="range"
+                id="e-hurdle"
+                min="2"
+                max="20"
+                step="0.5"
+                value="8"
+              />
+            </div>
+            <div class="slider">
+              <label for="e-spread"
+                >Profit per dollar filled <output id="e-spread-o"></output
+              ></label>
+              <input
+                type="range"
+                id="e-spread"
+                min="0.5"
+                max="10"
+                step="0.5"
+                value="3"
+              />
+            </div>
+            <div class="slider">
+              <label for="e-fills"
+                >Liquidations filled per year <output id="e-fills-o"></output
+              ></label>
+              <input
+                type="range"
+                id="e-fills"
+                min="0"
+                max="10000000"
+                step="100000"
+                value="1000000"
+              />
+            </div>
+          </div>
+          <div>
+            <svg id="econsvg" viewBox="0 0 520 150" aria-hidden="true"></svg>
+            <div class="readout" aria-live="polite">
+              <div>
+                <span>Reservation fee needed</span>
+                <b id="e-fee"></b>
+              </div>
+              <div>
+                <span>Fills to break even without a fee</span>
+                <b id="e-be"></b>
+              </div>
+            </div>
+          </div>
+        </div>
+        <figcaption>
+          Defaults follow the brief's illustration: $2M at 8% costs $160k a
+          year; at a 3% profit per dollar filled, that takes about $5.3M of
+          fills to break even, before losses and hedging. Profit per fill isn't
+          guaranteed: the crash simulator shows fills losing money below the bid
+          price.
+        </figcaption>
+      </figure>
+      <div class="prose" style="margin-top: 28px">
+        <p>
+          The category isn't new: B.Protocol ran funded liquidation backstops on
+          Ethereum. Bidwall's angle is term-locked, asset-specific capacity that
+          anyone can inspect on-chain, wired directly into Kamino's liquidation
+          path for tokenized stocks. If a market maker and a curator both say
+          no, Bidwall is still strong infrastructure research and a credible
+          hackathon submission. It just isn't a validated business.
+        </p>
+      </div>
 
-      <!-- 9 -->
-      <h2 id="outreach">
-        <span class="n">09</span>Vetting with your Superteam contacts
-      </h2>
-      <p>
-        The goal of each conversation is a <b>concrete answer</b>, not "sounds
-        interesting". A clear "no, because…" is just as useful. Pick the
-        questions that fit each person.
-      </p>
-      <div class="grid g2">
-        <div class="card q">
-          <span class="tag">Kamino / lending people</span>
+      <!-- Outreach -->
+      <h2 id="outreach">Ask your Superteam contacts for a concrete answer</h2>
+      <div class="prose">
+        <p>
+          "Interesting, keep me posted" tells us nothing. The useful outcomes
+          are an indicative term sheet (price, size, duration, fee), a named
+          decision a curator would make differently, or a clear "no, because
+          liquidations already work". Pick the questions that fit each person.
+        </p>
+      </div>
+      <div class="asks">
+        <section>
+          <h3>Kamino and lending people</h3>
           <ul>
             <li>
-              How do xStocks liquidations actually play out today? Who are the
-              liquidators, and have any been missed or slow?
+              How do xStocks liquidations play out today? Who liquidates, and
+              have any been slow or missed?
             </li>
             <li>
-              Is exit depth for large NVDAx/SPYx positions something the risk
-              team worries about? Does it cap collateral limits?
+              Does exit depth for large NVDAx or SPYx positions worry the risk
+              team, or cap collateral limits?
             </li>
             <li>
-              Would a curator or vault (e.g. Sentora/Veda-style) pay a fee for
-              guaranteed liquidation buyers? Who holds that budget?
+              Would a curator or vault pay a fee for guaranteed buyers? Who
+              holds that budget?
             </li>
             <li>
-              Would Kamino ever recognise committed capacity in its risk
-              settings?
+              Could Kamino ever count committed capacity in its risk settings?
             </li>
           </ul>
-        </div>
-        <div class="card q">
-          <span class="tag">Market makers / liquidators</span>
+        </section>
+        <section>
+          <h3>Market makers and liquidators</h3>
           <ul>
             <li>
               Would you lock USDC for NVDAx at a fixed price for a fixed term?
               Roughly what discount, size and duration?
             </li>
-            <li>What reservation fee (annualised %) would make it worth it?</li>
-            <li>
-              Can you hedge NVDAx inventory off-chain (perps, TradFi), and how
-              fast?
-            </li>
+            <li>What yearly reservation fee would make it worth it?</li>
+            <li>Can you hedge NVDAx inventory off-chain, and how quickly?</li>
             <li>
               Is "can't cancel during the term" a dealbreaker? What would make
               it acceptable?
             </li>
           </ul>
-        </div>
-        <div class="card q">
-          <span class="tag">Builders / mentors</span>
+        </section>
+        <section>
+          <h3>Builders and mentors</h3>
           <ul>
             <li>Is the story clear in 60 seconds? What confused you?</li>
             <li>
-              For judges: does a real Kamino CPI plus an offline replay land, or
-              do we need something live?
-            </li>
-            <li>Who should we talk to at Kamino, xStocks/Backed or an MM?</li>
-          </ul>
-        </div>
-        <div class="card q">
-          <span class="tag">What counts as a signal</span>
-          <ul>
-            <li>
-              <span class="tag ok">strong</span> An indicative term sheet: price
-              rule, size, duration, fee.
+              Will judges value a real Kamino CPI with an offline replay, or do
+              we need something live?
             </li>
             <li>
-              <span class="tag ok">strong</span> A named decision a curator
-              would make differently.
-            </li>
-            <li>
-              <span class="tag maybe">weak</span> "Interesting, keep me posted."
-            </li>
-            <li>
-              <span class="tag no">useful no</span> "Liquidations already work,
-              because X."
+              Who should we talk to at Kamino, xStocks/Backed or a market maker?
             </li>
           </ul>
-        </div>
+        </section>
       </div>
-      <h3>Message you can adapt</h3>
-      <pre>
+      <div
+        class="controls"
+        style="justify-content: space-between; margin-top: 16px"
+      >
+        <h3 style="margin: 0">A message you can adapt</h3>
+        <button id="copy">Copy message</button>
+      </div>
+      <pre class="message" id="msg">
 Hey [name], I'm building Bidwall for the Colosseum hackathon and would value 15 minutes of your honest take.
 
-The problem: tokenized stocks like NVDAx are used as collateral on Kamino, but on-chain exit depth is thin. A $1M NVDAx sell quoted ~34% below spot in our snapshot, so a large liquidation in a crash may have no good buyer.
+The problem: tokenized stocks like NVDAx are used as collateral on Kamino, but on-chain exit depth is thin. A $1M NVDAx sell quoted about 34% below spot in our snapshot, so a large liquidation in a crash may have no good buyer.
 
-What we built: a market maker locks USDC into a fixed-price, fixed-term bid for NVDAx that can't be cancelled. When a Kamino loan becomes liquidatable, one atomic transaction repays the debt from that escrow and delivers the collateral to the MM. It works against Kamino's real v2 liquidation program (mainnet fork and replay), with 42 tests.
+What we built: a market maker locks USDC into a fixed-price, fixed-term bid for NVDAx that can't be cancelled. When a Kamino loan becomes liquidatable, one atomic transaction repays the debt from that escrow and delivers the collateral to the market maker. It runs against Kamino's real v2 liquidation program (mainnet fork and offline replay), with 42 tests.
 
 What I'm trying to learn: [pick one]
-- Would a curator or lender pay a fee to have committed buyers on standby?
-- As an MM, what discount, size, term and fee would make you lock capital like this?
+- Would a curator or lender pay a fee to keep committed buyers on standby?
+- As a market maker, what discount, size, term and fee would make you lock capital like this?
 - Is exit liquidity for xStocks actually a problem you've seen, or do liquidations already work fine?
 
 A "no, because..." is genuinely useful. Happy to show the demo.</pre>
 
-      <!-- 10 -->
-      <h2 id="next"><span class="n">10</span>Next steps</h2>
-      <table>
-        <tr>
-          <th>#</th>
-          <th>Task</th>
-          <th>Why</th>
-        </tr>
-        <tr>
-          <td>1</td>
-          <td>Send 3–5 Superteam messages (section 9)</td>
-          <td>Only thing that answers "is this worth continuing"</td>
-        </tr>
-        <tr>
-          <td>2</td>
-          <td>
-            Quote observer: bounded Jupiter quote for the same raw NVDAx amount
-          </td>
-          <td>
-            Honest "DEX exit vs committed bid" comparison; required by the brief
-          </td>
-        </tr>
-        <tr>
-          <td>3</td>
-          <td>Choose one name (Bidwall or Backstop)</td>
-          <td>The docs currently use both</td>
-        </tr>
-        <tr>
-          <td>4</td>
-          <td>Record the demo video and write the submission</td>
-          <td>The scripted console is enough to show judges</td>
-        </tr>
-        <tr>
-          <td>5</td>
-          <td>Wallet-driven bid entry, only if time remains</td>
-          <td>Most expensive item; adds the least to the submission</td>
-        </tr>
-      </table>
-      <p class="muted" style="margin-top: 40px">
-        Sources: <code>docs/RWA-LIQUIDATION-DEPTH.md</code> (brief),
-        <code>docs/RWA-LIQUIDATION-DEPTH-REVIEW.md</code> (critical review),
-        <code>docs/KAMINO-INTEGRATION.md</code> and
-        <code>docs/OPERATOR-DEMO.md</code> (settlement evidence and demo
-        figures).
+      <!-- Next -->
+      <h2 id="next">What to do next, in order</h2>
+      <ol class="next">
+        <li>
+          Send 3 to 5 Superteam messages this week.<span
+            >The only thing that answers whether to keep going after the
+            hackathon.</span
+          >
+        </li>
+        <li>
+          Build the quote observer.<span
+            >A bounded Jupiter quote for the same raw NVDAx amount the demo
+            settles: an honest DEX-exit versus bid comparison.</span
+          >
+        </li>
+        <li>
+          Pick one name, Bidwall or Backstop.<span
+            >The docs currently use both.</span
+          >
+        </li>
+        <li>
+          Record the demo video and write the submission.<span
+            >The scripted console is enough to show judges.</span
+          >
+        </li>
+        <li>
+          Wallet-driven bid entry, only if time remains.<span
+            >The most expensive item, and it adds the least to the
+            submission.</span
+          >
+        </li>
+      </ol>
+      <p class="small" style="margin-top: 64px">
+        Sources: docs/RWA-LIQUIDATION-DEPTH.md (brief and quote snapshot),
+        docs/RWA-LIQUIDATION-DEPTH-REVIEW.md (critical review),
+        docs/KAMINO-INTEGRATION.md and docs/OPERATOR-DEMO.md (settlement
+        figures). Demo re-run and passing on 3 October 2026.
       </p>
     </main>
+
+    <script>
+      const NS = "http://www.w3.org/2000/svg";
+      const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const css = (v) =>
+        getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+      const C = {
+        ink: css("--ink"),
+        ink2: css("--ink-2"),
+        ink3: css("--ink-3"),
+        soft: css("--rule-soft"),
+        usdc: css("--usdc"),
+        usdcSoft: css("--usdc-soft"),
+        nvda: css("--nvda"),
+        nvdaSoft: css("--nvda-soft"),
+        kamino: css("--kamino"),
+        surplus: css("--surplus"),
+        fail: css("--fail"),
+      };
+      function el(tag, attrs = {}, parent) {
+        const n = document.createElementNS(NS, tag);
+        for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v);
+        if (parent) parent.appendChild(n);
+        return n;
+      }
+      function txt(parent, x, y, s, attrs = {}) {
+        const t = el("text", { x, y, ...attrs }, parent);
+        t.textContent = s;
+        return t;
+      }
+      const fmt = (n, d = 2) =>
+        n.toLocaleString("en-US", {
+          minimumFractionDigits: d,
+          maximumFractionDigits: d,
+        });
+      const tip = document.getElementById("tip");
+      function showTip(e, s) {
+        tip.textContent = s;
+        tip.style.left = e.clientX + 14 + "px";
+        tip.style.top = e.clientY - 34 + "px";
+        tip.style.opacity = 1;
+      }
+      const hideTip = () => (tip.style.opacity = 0);
+      function tween(ms, onFrame) {
+        return new Promise((resolve) => {
+          if (REDUCED || ms === 0) {
+            onFrame(1);
+            return resolve();
+          }
+          const t0 = performance.now();
+          function frame(now) {
+            const t = Math.min(1, (now - t0) / ms);
+            onFrame(t);
+            t < 1 ? requestAnimationFrame(frame) : resolve();
+          }
+          requestAnimationFrame(frame);
+        });
+      }
+      const ease = (t) => (t < 0.5 ? 2 * t * t : 1 - (-2 * t + 2) ** 2 / 2);
+      const wait = (ms) => new Promise((r) => setTimeout(r, REDUCED ? 0 : ms));
+
+      /* ---------- Hero: order book ladder ---------- */
+      (function hero() {
+        // [price as a fraction of spot, depth in $k], fitted to the 20 Sep snapshot.
+        const BOOK = [
+          [1.0, 100],
+          [0.997, 75],
+          [0.9895, 75],
+          [0.98, 60],
+          [0.96, 60],
+          [0.94, 60],
+          [0.9218, 70],
+          [0.88, 40],
+          [0.75, 40],
+          [0.55, 60],
+          [0.4, 80],
+          [0.1605, 280],
+        ];
+        const WALL = [0.96, 1000];
+        const ORDER = 1000;
+        const svg = document.getElementById("ladder");
+        const X0 = 110,
+          W = 560,
+          TOP = 40,
+          ROW = 27,
+          WALL_ROW = 54;
+        const wOf = (s) => (s / 1000) * W;
+        const pct = (f) => {
+          const v = (f - 1) * 100;
+          return `${v < -0.005 ? "−" : ""}${Math.abs(v).toFixed(Math.abs(v) < 1 ? 2 : 1)}%`;
+        };
+        const money = (k) => (k >= 999.5 ? "$1.00M" : `$${fmt(k, 0)}k`);
+        const avgEl = document.getElementById("avg");
+        const soldEl = document.getElementById("sold");
+        const worstEl = document.getElementById("worst");
+        let running = false;
+
+        const layer = el("g", {}, svg);
+        const OX = X0 + W + 150;
+        txt(svg, X0 - 12, 20, "Price vs spot", {
+          "text-anchor": "end",
+          "font-size": 13,
+          fill: C.ink3,
+        });
+        txt(svg, X0, 20, "Buyers waiting at that price", {
+          "font-size": 13,
+          fill: C.ink3,
+        });
+        txt(svg, OX + 22, 20, "Liquidation", {
+          "text-anchor": "middle",
+          "font-size": 13,
+          fill: C.ink3,
+        });
+        const orderBg = el(
+          "rect",
+          { x: OX, y: TOP, width: 44, rx: 4, fill: C.nvdaSoft },
+          svg
+        );
+        const orderBar = el(
+          "rect",
+          { x: OX, y: TOP, width: 44, rx: 4, fill: C.nvda },
+          svg
+        );
+        const leftLbl = txt(svg, OX + 22, TOP + 16, "", {
+          "text-anchor": "middle",
+          "font-size": 13,
+          "font-weight": 700,
+          fill: C.ink,
+        });
+        const cursor = el(
+          "polygon",
+          { points: "0,0 -10,-6 -10,6", fill: C.nvda, opacity: 0 },
+          svg
+        );
+
+        let rows = [],
+          H = 0;
+        function draw(withWall) {
+          layer.innerHTML = "";
+          const levels = BOOK.map(([f, s]) => ({ f, s, wall: false }));
+          if (withWall) levels.push({ f: WALL[0], s: WALL[1], wall: true });
+          levels.sort((a, b) => b.f - a.f || a.wall - b.wall);
+          let y = TOP;
+          rows = levels.map((lv) => {
+            const g = el("g", {}, layer);
+            const rowH = lv.wall ? WALL_ROW : ROW;
+            const barH = lv.wall ? 22 : 14;
+            const by = y + rowH - barH - 6;
+            el(
+              "line",
+              {
+                x1: 20,
+                x2: X0 + W + 60,
+                y1: y + rowH,
+                y2: y + rowH,
+                stroke: C.soft,
+              },
+              g
+            );
+            const priceLbl = txt(g, X0 - 12, by + barH - 3, pct(lv.f), {
+              "text-anchor": "end",
+              "font-size": 14,
+              fill: lv.wall ? C.usdc : C.ink,
+              "font-weight": lv.wall ? 700 : 400,
+            });
+            el(
+              "rect",
+              {
+                x: X0,
+                y: by,
+                width: wOf(lv.s),
+                height: barH,
+                rx: 3,
+                fill: lv.wall ? C.usdc : C.ink2,
+              },
+              g
+            );
+            const eaten = el(
+              "rect",
+              {
+                x: X0,
+                y: by,
+                width: 0,
+                height: barH,
+                rx: 3,
+                fill: lv.wall ? "#9fb1ef" : C.nvda,
+              },
+              g
+            );
+            if (lv.wall) {
+              txt(
+                g,
+                X0,
+                by - 8,
+                "Bidwall: $1M of escrowed USDC, 4% below spot, can't be withdrawn",
+                { "font-size": 14, "font-weight": 700, fill: C.usdc }
+              );
+            } else {
+              txt(g, X0 + wOf(lv.s) + 8, by + barH - 3, `$${lv.s}k`, {
+                "font-size": 12,
+                fill: C.ink3,
+              });
+            }
+            const hit = el(
+              "rect",
+              {
+                x: 20,
+                y,
+                width: X0 + W + 40,
+                height: rowH,
+                fill: "transparent",
+              },
+              g
+            );
+            hit.addEventListener("mousemove", (e) =>
+              showTip(
+                e,
+                `${lv.wall ? "Bidwall bid" : "DEX buyers"}: $${lv.s}k at ${pct(lv.f)} vs spot`
+              )
+            );
+            hit.addEventListener("mouseleave", hideTip);
+            const row = { ...lv, eaten, priceLbl, mid: by + barH / 2 };
+            y += rowH;
+            return row;
+          });
+          H = y - TOP;
+          svg.setAttribute("viewBox", `0 0 1000 ${y + 36}`);
+          orderBg.setAttribute("height", H);
+          orderBar.setAttribute("y", TOP);
+          orderBar.setAttribute("height", H);
+          leftLbl.textContent = "$1.00M to sell";
+          leftLbl.setAttribute("y", TOP + H + 22);
+          cursor.setAttribute("opacity", 0);
+        }
+
+        async function run(withWall) {
+          if (running) return;
+          running = true;
+          draw(withWall);
+          avgEl.className = "verdict";
+          cursor.setAttribute("opacity", 1);
+          cursor.setAttribute("fill", withWall ? C.usdc : C.nvda);
+          await tween(withWall ? 1800 : 4200, (t) => {
+            const sold = ORDER * ease(t);
+            let left = sold,
+              proceeds = 0,
+              worst = rows[0];
+            for (const r of rows) {
+              const take = Math.min(r.s, left);
+              r.eaten.setAttribute("width", wOf(take));
+              if (take > 0) {
+                proceeds += take * r.f;
+                worst = r;
+              }
+              left -= take;
+            }
+            const avg = sold > 0 ? proceeds / sold : 1;
+            avgEl.textContent = `${avg < 1 ? "−" : ""}${Math.abs((avg - 1) * 100).toFixed(2)}%`;
+            soldEl.textContent = money(sold);
+            worstEl.textContent = pct(worst.f);
+            cursor.setAttribute(
+              "transform",
+              `translate(${X0 - 64},${worst.mid})`
+            );
+            const rest = H * (1 - sold / ORDER);
+            orderBar.setAttribute("y", TOP + H - rest);
+            orderBar.setAttribute("height", rest);
+            leftLbl.textContent =
+              sold >= ORDER - 0.5 ? "Sold" : `${money(ORDER - sold)} to sell`;
+          });
+          avgEl.className = "verdict " + (withWall ? "good" : "bad");
+          running = false;
+        }
+        document.getElementById("sell-dex").onclick = () => run(false);
+        document.getElementById("sell-wall").onclick = () => run(true);
+        draw(false);
+        // The page's one unprompted moment: play the thin-book sale once.
+        setTimeout(() => run(false), 700);
+      })();
+
+      /* ---------- Slippage chart ---------- */
+      (function slip() {
+        const SIZES = ["$100k", "$250k", "$500k", "$1M"];
+        const DATA = {
+          NVDAx: [0.04, -0.39, -2.73, -33.85],
+          TSLAx: [-0.21, -1.43, -4.49, -42.05],
+          AAPLx: [-1.13, -3.92, -39.35, -69.32],
+          METAx: [-1.34, -6.82, -51.7, -76.58],
+          SPYx: [0.57, 0.53, 0.48, 0.29],
+        };
+        const svg = document.getElementById("slip");
+        const L = 70,
+          R = 820,
+          T = 20,
+          B = 350;
+        const x = (i) => L + (i * (R - L)) / 3;
+        const y = (v) => T + ((5 - v) / 85) * (B - T);
+        for (const v of [0, -20, -40, -60, -80]) {
+          el(
+            "line",
+            {
+              x1: L,
+              x2: R,
+              y1: y(v),
+              y2: y(v),
+              stroke: v === 0 ? C.ink3 : C.soft,
+            },
+            svg
+          );
+          txt(svg, L - 12, y(v) + 5, v === 0 ? "0%" : `−${-v}%`, {
+            "text-anchor": "end",
+            "font-size": 14,
+          });
+        }
+        SIZES.forEach((s, i) =>
+          txt(svg, x(i), B + 32, s, {
+            "text-anchor": "middle",
+            "font-size": 15,
+            fill: C.ink,
+          })
+        );
+        // Direct labels at the $1M end; nudge apart where values are close.
+        const labelY = {
+          NVDAx: -33.85,
+          TSLAx: -42.05,
+          AAPLx: -69.32,
+          METAx: -76.58,
+          SPYx: 0.29,
+        };
+        labelY.AAPLx = -68;
+        labelY.METAx = -78.5;
+        const series = {};
+        for (const [name, vals] of Object.entries(DATA)) {
+          const g = el("g", { style: "cursor:pointer" }, svg);
+          const pts = vals.map((v, i) => `${x(i)},${y(v)}`).join(" ");
+          el(
+            "polyline",
+            {
+              points: pts,
+              fill: "none",
+              stroke: "transparent",
+              "stroke-width": 16,
+            },
+            g
+          );
+          const line = el(
+            "polyline",
+            {
+              points: pts,
+              fill: "none",
+              "stroke-width": 2,
+              "stroke-linejoin": "round",
+            },
+            g
+          );
+          const dots = vals.map((v, i) => {
+            const d = el(
+              "circle",
+              { cx: x(i), cy: y(v), r: 5, stroke: "#fff", "stroke-width": 2 },
+              g
+            );
+            const hit = el(
+              "circle",
+              { cx: x(i), cy: y(v), r: 14, fill: "transparent" },
+              g
+            );
+            hit.addEventListener("mousemove", (e) =>
+              showTip(
+                e,
+                `${name} at ${SIZES[i]}: ${v > 0 ? "+" : "−"}${Math.abs(v)}%`
+              )
+            );
+            hit.addEventListener("mouseleave", hideTip);
+            return d;
+          });
+          const lbl = txt(
+            g,
+            R + 14,
+            y(labelY[name]) + 5,
+            `${name} ${vals[3] > 0 ? "+" : "−"}${Math.abs(vals[3])}%`,
+            { "font-size": 15 }
+          );
+          g.addEventListener("mouseenter", () => setFocus(name));
+          series[name] = { g, line, dots, lbl };
+        }
+        svg.addEventListener("mouseleave", () => setFocus("NVDAx"));
+        function setFocus(name) {
+          for (const [n, s] of Object.entries(series)) {
+            const on = n === name;
+            const col = on ? (n === "NVDAx" ? C.nvda : C.ink) : "#b9bfc8";
+            s.line.setAttribute("stroke", col);
+            s.line.setAttribute("stroke-width", on ? 3 : 2);
+            s.dots.forEach((d) => d.setAttribute("fill", col));
+            s.lbl.setAttribute("fill", on ? C.ink : C.ink3);
+            s.lbl.setAttribute("font-weight", on ? 700 : 400);
+            if (on) svg.appendChild(s.g);
+          }
+        }
+        setFocus("NVDAx");
+        document.getElementById("slip-table").innerHTML =
+          `<tr><th>Token</th>${SIZES.map((s) => `<th>${s}</th>`).join("")}</tr>` +
+          Object.entries(DATA)
+            .map(
+              ([n, v]) =>
+                `<tr><td>${n}</td>${v.map((p) => `<td>${p > 0 ? "+" : "−"}${Math.abs(p)}%</td>`).join("")}</tr>`
+            )
+            .join("");
+      })();
+
+      /* ---------- Crash simulator ---------- */
+      (function crash() {
+        const COLL = 10,
+          DEBT = 1100,
+          LIQ_LTV = 2 / 3,
+          CLOSE = 0.5,
+          BONUS = 0.05;
+        const BID = 150,
+          CAP = 10,
+          ESCROW = 1500;
+        const LIQ_P = DEBT / (COLL * LIQ_LTV); // 165
+        const FILL_P = BID * (1 + BONUS); // 157.5
+        const PMIN = 100,
+          PMAX = 240;
+        const slider = document.getElementById("price");
+        const zones = document.getElementById("zones");
+        const ltvbar = document.getElementById("ltvbar");
+        const split = document.getElementById("split");
+        const xz = (p) => 10 + ((p - PMIN) / (PMAX - PMIN)) * 580;
+
+        const bands = [
+          [PMIN, FILL_P, C.usdc, "Bid fills"],
+          [FILL_P, LIQ_P, C.fail, "Gap"],
+          [LIQ_P, PMAX, C.kamino, "Healthy"],
+        ];
+        for (const [a, b, col, name] of bands) {
+          el(
+            "rect",
+            {
+              x: xz(a) + 1,
+              y: 40,
+              width: xz(b) - xz(a) - 2,
+              height: 18,
+              rx: 3,
+              fill: col,
+            },
+            zones
+          );
+          txt(zones, (xz(a) + xz(b)) / 2, 32, name, {
+            "text-anchor": "middle",
+            "font-size": 13,
+            "font-weight": 700,
+            fill: C.ink,
+          });
+        }
+        for (const p of [100, 150, 165, 200, 240]) {
+          txt(zones, xz(p), 80, `$${p}`, {
+            "text-anchor": "middle",
+            "font-size": 12,
+            fill: C.ink3,
+          });
+        }
+        txt(zones, xz(BID), 98, "bid price", {
+          "text-anchor": "middle",
+          "font-size": 11,
+          fill: C.usdc,
+        });
+        txt(zones, xz(LIQ_P), 98, "liquidatable", {
+          "text-anchor": "middle",
+          "font-size": 11,
+          fill: C.ink3,
+        });
+        const marker = el(
+          "polygon",
+          { points: "0,0 -8,12 8,12", fill: C.ink },
+          zones
+        );
+
+        el(
+          "rect",
+          { x: 0, y: 18, width: 600, height: 16, rx: 3, fill: C.soft },
+          ltvbar
+        );
+        const ltvFill = el(
+          "rect",
+          { x: 0, y: 18, width: 0, height: 16, rx: 3 },
+          ltvbar
+        );
+        el(
+          "line",
+          {
+            x1: 600 * LIQ_LTV,
+            x2: 600 * LIQ_LTV,
+            y1: 10,
+            y2: 42,
+            stroke: C.ink,
+            "stroke-width": 2,
+          },
+          ltvbar
+        );
+        txt(ltvbar, 600 * LIQ_LTV, 58, "liquidation at 66.7%", {
+          "text-anchor": "middle",
+          "font-size": 12,
+          fill: C.ink,
+        });
+        txt(ltvbar, 0, 58, "0%", { "font-size": 12, fill: C.ink3 });
+        txt(ltvbar, 600, 58, "100%", {
+          "text-anchor": "end",
+          "font-size": 12,
+          fill: C.ink3,
+        });
+
+        const state = document.getElementById("state");
+        const why = document.getElementById("state-why");
+        const kv = document.getElementById("kv");
+        function drawSplit(R, pay) {
+          split.innerHTML = "";
+          const W = 420,
+            max = 900;
+          const w = (v) => (v / max) * W;
+          const covered = Math.min(pay, R);
+          const surplus = Math.max(0, pay - R);
+          el(
+            "rect",
+            {
+              x: 0,
+              y: 26,
+              width: w(R),
+              height: 22,
+              rx: 3,
+              fill: "none",
+              stroke: C.ink,
+              "stroke-dasharray": "4 3",
+            },
+            split
+          );
+          el(
+            "rect",
+            {
+              x: 0,
+              y: 26,
+              width: w(covered),
+              height: 22,
+              rx: 3,
+              fill: pay >= R ? C.kamino : C.fail,
+            },
+            split
+          );
+          if (surplus > 0)
+            el(
+              "rect",
+              {
+                x: w(R) + 2,
+                y: 26,
+                width: Math.max(1, w(surplus) - 2),
+                height: 22,
+                rx: 3,
+                fill: C.surplus,
+              },
+              split
+            );
+          txt(split, 0, 18, `Repayment ${fmt(R)} USDC`, {
+            "font-size": 12,
+            fill: C.ink,
+          });
+          if (surplus > 0)
+            txt(split, W, 18, `+${fmt(surplus)} to borrower`, {
+              "text-anchor": "end",
+              "font-size": 12,
+              "font-weight": 700,
+              fill: C.ink,
+            });
+          txt(
+            split,
+            0,
+            70,
+            pay >= R
+              ? `Bid pays ${fmt(pay)} USDC in total`
+              : `Bid would pay only ${fmt(pay)} USDC`,
+            { "font-size": 12, fill: C.ink2 }
+          );
+        }
+        function render() {
+          const p = +slider.value;
+          const ltv = DEBT / (COLL * p);
+          document.getElementById("p-out").textContent = `$${fmt(p)}`;
+          document.getElementById("ltv-out").textContent =
+            `${(ltv * 100).toFixed(1)}%`;
+          marker.setAttribute("transform", `translate(${xz(p)},60)`);
+          ltvFill.setAttribute("width", Math.min(600, 600 * ltv));
+          let rows;
+          if (p >= LIQ_P) {
+            split.innerHTML = "";
+            ltvFill.setAttribute("fill", C.kamino);
+            state.className = "state healthy";
+            state.textContent = "Healthy loan, nothing happens";
+            why.textContent = `Kamino rejects any liquidation until NVDAx falls below $${LIQ_P}. The bid sits locked and untouched.`;
+            rows = [
+              ["Escrow", `${fmt(ESCROW)} USDC`],
+              ["Bid capacity", `${CAP} NVDAx`],
+            ];
+          } else {
+            ltvFill.setAttribute("fill", C.fail);
+            const R = DEBT * CLOSE;
+            const seized = Math.min(COLL, (R * (1 + BONUS)) / p);
+            const pay = seized * BID;
+            drawSplit(R, pay);
+            if (pay < R) {
+              state.className = "state gap";
+              state.textContent = "Liquidatable, but the bid is too low";
+              why.textContent = `Kamino releases ${fmt(seized, 3)} NVDAx. At $${BID} each that's ${fmt(pay)} USDC, short of the ${fmt(R)} repayment, so Bidwall reverts. Only ordinary liquidators can act, through the thin DEX book.`;
+              rows = [
+                ["Shortfall", `${fmt(R - pay)} USDC`],
+                ["Escrow", `${fmt(ESCROW)} USDC, unchanged`],
+              ];
+            } else {
+              const pnl = seized * (p - BID);
+              state.className = "state fill";
+              state.textContent = "Bid fills in one transaction";
+              why.textContent = `Kamino releases ${fmt(seized, 3)} NVDAx. The provider pays $${BID} each: ${fmt(R)} USDC repays the debt and the borrower keeps the rest.`;
+              rows = [
+                ["Provider receives", `${fmt(seized, 3)} NVDAx`],
+                ["Provider pays", `${fmt(pay)} USDC`],
+                [
+                  "Provider's value at oracle",
+                  `${pnl >= 0 ? "+" : "−"}${fmt(Math.abs(pnl))} USDC`,
+                ],
+                ["Escrow left", `${fmt(ESCROW - pay)} USDC`],
+              ];
+            }
+          }
+          kv.innerHTML = rows
+            .map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`)
+            .join("");
+        }
+        slider.addEventListener("input", render);
+        let anim = false;
+        document.getElementById("crash-play").onclick = async () => {
+          if (anim) return;
+          anim = true;
+          slider.value = 225;
+          await tween(4500, (t) => {
+            slider.value = 225 + (140 - 225) * ease(t);
+            render();
+          });
+          anim = false;
+        };
+        document.getElementById("crash-reset").onclick = () => {
+          if (anim) return;
+          slider.value = 225;
+          render();
+        };
+        render();
+      })();
+
+      /* ---------- Transaction player ---------- */
+      (function tx() {
+        const svg = document.getElementById("txsvg");
+        const N = {
+          escrow: { x: 100, y: 60, label: "Bid escrow", col: C.usdc },
+          liq: {
+            x: 320,
+            y: 60,
+            label: "Liquidator account",
+            sub: "owned by Bidwall",
+            col: C.ink2,
+          },
+          kamino: {
+            x: 540,
+            y: 60,
+            label: "Kamino",
+            sub: "lender",
+            col: C.kamino,
+          },
+          prov: { x: 540, y: 270, label: "Provider", col: C.usdc },
+          borr: { x: 100, y: 270, label: "Borrower", col: C.surplus },
+        };
+        const nodes = {};
+        for (const [k, n] of Object.entries(N)) {
+          const g = el("g", {}, svg);
+          const box = el(
+            "rect",
+            {
+              x: n.x - 90,
+              y: n.y - 34,
+              width: 180,
+              height: 68,
+              rx: 6,
+              fill: "#fff",
+              stroke: n.col,
+              "stroke-width": 2,
+            },
+            g
+          );
+          txt(g, n.x, n.y - 3, n.label, {
+            "text-anchor": "middle",
+            "font-size": 15,
+            "font-weight": 700,
+            fill: C.ink,
+          });
+          txt(g, n.x, n.y + 17, n.sub || "", {
+            "text-anchor": "middle",
+            "font-size": 12,
+            fill: C.ink3,
+          });
+          nodes[k] = { box };
+        }
+        const status = txt(svg, 320, 160, "", {
+          "text-anchor": "middle",
+          "font-size": 17,
+          "font-weight": 800,
+          fill: C.ink,
+        });
+        const status2 = txt(svg, 320, 184, "", {
+          "text-anchor": "middle",
+          "font-size": 13,
+          fill: C.ink2,
+        });
+        el(
+          "rect",
+          { x: 170, y: 352, width: 300, height: 10, rx: 3, fill: C.soft },
+          svg
+        );
+        const capFill = el(
+          "rect",
+          { x: 170, y: 352, width: 300, height: 10, rx: 3, fill: C.usdc },
+          svg
+        );
+        const capLbl = txt(svg, 320, 344, "", {
+          "text-anchor": "middle",
+          "font-size": 12,
+          fill: C.ink2,
+        });
+        const tokens = el("g", {}, svg);
+
+        const stepsEl = [...document.querySelectorAll("#tx-steps li")];
+        const step6 = document.getElementById("step6");
+        const banner = document.getElementById("tx-banner");
+        const bal = {
+          escrow: document.getElementById("b-escrow"),
+          debt: document.getElementById("b-debt"),
+          prov: document.getElementById("b-prov"),
+          borr: document.getElementById("b-borr"),
+        };
+        let i = 0,
+          busy = false,
+          broken = false,
+          playing = false;
+
+        function setBal(e, d, p, b) {
+          bal.escrow.textContent = `${fmt(e)} USDC`;
+          bal.debt.textContent = `${fmt(d)} USDC`;
+          bal.prov.textContent = `${fmt(p, 3)} NVDAx`;
+          bal.borr.textContent = `${fmt(b)} USDC`;
+        }
+        function pulse(k, fill) {
+          const b = nodes[k].box;
+          b.setAttribute("stroke-width", 4);
+          b.setAttribute("fill", fill);
+          setTimeout(
+            () => {
+              b.setAttribute("stroke-width", 2);
+              b.setAttribute("fill", "#fff");
+            },
+            REDUCED ? 0 : 800
+          );
+        }
+        async function move(from, to, col, label, ms = 1100) {
+          const a = N[from],
+            b = N[to];
+          const g = el("g", {}, tokens);
+          el(
+            "circle",
+            { r: 11, fill: col, stroke: "#fff", "stroke-width": 2 },
+            g
+          );
+          const t = txt(g, 0, -18, label, {
+            "text-anchor": "middle",
+            "font-size": 13,
+            "font-weight": 700,
+            fill: C.ink,
+          });
+          t.setAttribute("paint-order", "stroke");
+          t.setAttribute("stroke", "#fff");
+          t.setAttribute("stroke-width", 4);
+          await tween(ms, (p) => {
+            const e = ease(p);
+            g.setAttribute(
+              "transform",
+              `translate(${a.x + (b.x - a.x) * e},${a.y + (b.y - a.y) * e})`
+            );
+          });
+          g.remove();
+        }
+        function say(a, b = "") {
+          status.textContent = a;
+          status2.textContent = b;
+        }
+        function mark() {
+          stepsEl.forEach(
+            (li, k) => (li.className = k < i ? "done" : k === i ? "active" : "")
+          );
+        }
+        function reset() {
+          i = 0;
+          tokens.innerHTML = "";
+          banner.className = "banner";
+          say("Ready", "Press play, or step through one at a time");
+          setBal(1500, 0, 0, 0);
+          capFill.setAttribute("width", 300);
+          capLbl.textContent = "Bid capacity: 10.000 of 10.000 NVDAx";
+          mark();
+        }
+        async function rollback() {
+          stepsEl[5].className = "failed";
+          say(
+            "Check failed: 554.97 < 566.38",
+            "3.964 × $140 doesn't cover the repayment"
+          );
+          Object.keys(nodes).forEach((k) => pulse(k, C.nvdaSoft));
+          await wait(1200);
+          say(
+            "Reverting everything",
+            "Kamino's repayment and collateral release are undone too"
+          );
+          await Promise.all([
+            move("kamino", "liq", C.usdc, "566.38 USDC", 900),
+            move("liq", "kamino", C.nvda, "3.964 NVDAx", 900),
+          ]);
+          await move("liq", "escrow", C.usdc, "566.38 USDC", 900);
+          setBal(1500, 0, 0, 0);
+          say("Reverted", "Every balance is back where it started");
+          banner.className = "banner bad show";
+          banner.textContent =
+            "Transaction reverted. The bid, the loan and Kamino's reserves are exactly as they were. Only the network fee was spent.";
+          i = 8;
+        }
+        async function step() {
+          if (busy || i >= 8) return;
+          busy = true;
+          mark();
+          switch (i) {
+            case 0:
+              say("Refresh", "Kamino updates reserves, oracle and loan");
+              pulse("kamino", "#d9f1ee");
+              await wait(1000);
+              break;
+            case 1:
+              say(
+                "Checks pass",
+                "Active, in window, named keeper, fresh quote"
+              );
+              pulse("escrow", C.usdcSoft);
+              await wait(1100);
+              break;
+            case 2:
+              say(
+                "Fund the repayment",
+                "Kamino never gets authority over the escrow"
+              );
+              await move("escrow", "liq", C.usdc, "566.38 USDC");
+              setBal(933.62, 0, 0, 0);
+              break;
+            case 3:
+              say(
+                "Kamino liquidates",
+                "It would reject a healthy loan or a stale price here"
+              );
+              await move("liq", "kamino", C.usdc, "566.38 USDC");
+              setBal(933.62, 566.38, 0, 0);
+              await move("kamino", "liq", C.nvda, "3.964 NVDAx");
+              break;
+            case 4:
+              say(
+                "Measure every balance",
+                "Debt down 566.38 ✓   collateral out 3.964 ✓"
+              );
+              pulse("liq", "#eef0f3");
+              await wait(1100);
+              break;
+            case 5:
+              if (broken) {
+                await rollback();
+                stepsEl.forEach(
+                  (li, k) =>
+                    (li.className = k < 5 ? "done" : k === 5 ? "failed" : "")
+                );
+                busy = false;
+                return;
+              }
+              say("Price at the bid", "3.964 × $150 = 594.63 ≥ 566.38 ✓");
+              await wait(1200);
+              break;
+            case 6:
+              say(
+                "Deliver",
+                "Collateral to the provider, surplus to the borrower"
+              );
+              await Promise.all([
+                move("liq", "prov", C.nvda, "3.964 NVDAx"),
+                move("escrow", "borr", C.surplus, "28.26 USDC"),
+              ]);
+              setBal(905.37, 566.38, 3.964, 28.26);
+              break;
+            case 7:
+              say("Settled", "Event emitted, capacity reduced");
+              await tween(700, (t) =>
+                capFill.setAttribute("width", 300 - 118.93 * t)
+              );
+              capLbl.textContent = "Bid capacity: 6.036 of 10.000 NVDAx";
+              banner.className = "banner ok show";
+              banner.textContent =
+                "Settled in one transaction: 566.38 USDC repaid, 3.964 NVDAx delivered, 28.26 USDC to the borrower, 905.37 USDC still in escrow.";
+              break;
+          }
+          i++;
+          mark();
+          busy = false;
+        }
+        document.getElementById("tx-step").onclick = step;
+        document.getElementById("tx-play").onclick = async () => {
+          if (playing || busy) return;
+          playing = true;
+          if (i >= 8) reset();
+          while (i < 8) {
+            await step();
+            await wait(300);
+          }
+          playing = false;
+        };
+        document.getElementById("tx-reset").onclick = () => {
+          if (!busy && !playing) reset();
+        };
+        document.getElementById("tx-break").onchange = (e) => {
+          broken = e.target.checked;
+          step6.textContent = broken
+            ? "Price the NVDAx at the bid: 3.964 × $140 = 554.97 USDC, short of 566.38."
+            : "Price the NVDAx at the bid: 3.964 × $150 = 594.63 USDC, enough to cover 566.38.";
+          if (!busy && !playing) reset();
+        };
+        reset();
+      })();
+
+      /* ---------- Lifecycle scrubber ---------- */
+      (function life() {
+        const svg = document.getElementById("lifesvg");
+        const day = document.getElementById("day");
+        const L = 60,
+          R = 960,
+          T = 50,
+          B = 220;
+        const x = (d) => L + (d / 10) * (R - L);
+        const y = (v) => B - (v / 1600) * (B - T);
+        const START = 1,
+          FILL = 4,
+          EXPIRY = 8;
+        let withdrawnAt = null;
+        const bal = (d) => {
+          if (withdrawnAt !== null && d >= withdrawnAt) return 0;
+          return d < FILL ? 1500 : 905.37;
+        };
+        el(
+          "rect",
+          {
+            x: x(START),
+            y: T - 40,
+            width: x(EXPIRY) - x(START),
+            height: B - T + 40,
+            fill: C.usdcSoft,
+          },
+          svg
+        );
+        txt(
+          svg,
+          (x(START) + x(EXPIRY)) / 2,
+          T - 18,
+          "Locked: no cancel, no reprice, no withdrawal",
+          {
+            "text-anchor": "middle",
+            "font-size": 14,
+            "font-weight": 700,
+            fill: C.usdc,
+          }
+        );
+        for (const v of [0, 500, 1000, 1500]) {
+          el(
+            "line",
+            {
+              x1: L,
+              x2: R,
+              y1: y(v),
+              y2: y(v),
+              stroke: v ? "#d3d9e8" : C.ink3,
+            },
+            svg
+          );
+          txt(svg, L - 10, y(v) + 4, fmt(v, 0), {
+            "text-anchor": "end",
+            "font-size": 12,
+          });
+        }
+        for (let d = 0; d <= 10; d++)
+          txt(svg, x(d), B + 22, `Day ${d}`, {
+            "text-anchor": "middle",
+            "font-size": 12,
+            fill: C.ink3,
+          });
+        for (const [d, s] of [
+          [START, "Active"],
+          [FILL, "Liquidation uses 594.63"],
+          [EXPIRY, "Expiry"],
+        ]) {
+          el(
+            "line",
+            {
+              x1: x(d),
+              x2: x(d),
+              y1: T - 10,
+              y2: B,
+              stroke: C.ink3,
+              "stroke-dasharray": "3 3",
+            },
+            svg
+          );
+          txt(svg, x(d) + 6, B - 8, s, { "font-size": 12, fill: C.ink });
+        }
+        const area = el("path", { fill: C.usdc, opacity: 0.16 }, svg);
+        const path = el(
+          "path",
+          { fill: "none", stroke: C.usdc, "stroke-width": 2.5 },
+          svg
+        );
+        const head = el("g", {}, svg);
+        el(
+          "line",
+          { x1: 0, x2: 0, y1: T - 10, y2: B, stroke: C.ink, "stroke-width": 2 },
+          head
+        );
+        const dot = el(
+          "circle",
+          { r: 6, fill: C.ink, stroke: "#fff", "stroke-width": 2 },
+          head
+        );
+        const headLbl = txt(head, 8, 0, "", {
+          "font-size": 14,
+          "font-weight": 700,
+          fill: C.ink,
+        });
+        headLbl.setAttribute("paint-order", "stroke");
+        headLbl.setAttribute("stroke", "#fff");
+        headLbl.setAttribute("stroke-width", 4);
+
+        const stateEl = document.getElementById("life-state");
+        const whyEl = document.getElementById("life-why");
+        const bW = document.getElementById("act-withdraw");
+        const bC = document.getElementById("act-cancel");
+        const bR = document.getElementById("act-reprice");
+        bC.title = bR.title = "Not possible while a bid is active";
+
+        function render() {
+          const d = +day.value;
+          document.getElementById("day-out").textContent =
+            `Day ${d.toFixed(1)}`;
+          const pts = [[0, bal(0)]];
+          for (const m of [FILL, withdrawnAt]
+            .filter((m) => m !== null && m <= d)
+            .sort((a, b) => a - b)) {
+            pts.push([m, bal(m - 1e-4)], [m, bal(m)]);
+          }
+          pts.push([d, bal(d)]);
+          const dStr = pts
+            .map(([a, b], k) => `${k ? "L" : "M"}${x(a)},${y(b)}`)
+            .join(" ");
+          path.setAttribute("d", dStr);
+          area.setAttribute("d", `${dStr} L${x(d)},${y(0)} L${x(0)},${y(0)} Z`);
+          head.setAttribute("transform", `translate(${x(d)},0)`);
+          dot.setAttribute("cy", y(bal(d)));
+          headLbl.setAttribute("y", y(bal(d)) - 12);
+          const right = d > 8.3;
+          headLbl.setAttribute("text-anchor", right ? "end" : "start");
+          headLbl.setAttribute("x", right ? -10 : 10);
+          headLbl.textContent = `${fmt(bal(d))} USDC`;
+
+          const withdrawn = withdrawnAt !== null && d >= withdrawnAt;
+          if (withdrawn) {
+            stateEl.textContent = "Withdrawn";
+            whyEl.textContent =
+              "The provider took back 905.37 USDC. The bid is closed.";
+          } else if (d < START) {
+            stateEl.textContent = "Created and funded";
+            whyEl.textContent = "The bid activates on day 1.";
+          } else if (d < EXPIRY) {
+            stateEl.textContent =
+              d < FILL ? "Active and locked" : "Active, partly used";
+            whyEl.textContent = `Locked until day ${EXPIRY}. Liquidations can still use what's left.`;
+          } else {
+            stateEl.textContent = "Expired";
+            whyEl.textContent =
+              "Liquidations can't use it any more, so the provider can withdraw.";
+          }
+          bW.disabled = !(d >= EXPIRY && !withdrawn);
+        }
+        day.addEventListener("input", () => {
+          if (withdrawnAt !== null && +day.value < withdrawnAt)
+            withdrawnAt = null;
+          render();
+        });
+        bW.onclick = () => {
+          withdrawnAt = +day.value;
+          render();
+        };
+        render();
+      })();
+
+      /* ---------- Economics ---------- */
+      (function econ() {
+        const ids = ["e-cap", "e-hurdle", "e-spread", "e-fills"];
+        const svg = document.getElementById("econsvg");
+        const usd = (v) =>
+          v >= 1e6 ? `$${fmt(v / 1e6, 2)}M` : `$${fmt(v / 1e3, 0)}k`;
+        function render() {
+          const [cap, hurdle, spread, fills] = ids.map(
+            (id) => +document.getElementById(id).value
+          );
+          document.getElementById("e-cap-o").textContent = usd(cap);
+          document.getElementById("e-hurdle-o").textContent =
+            `${hurdle}% a year`;
+          document.getElementById("e-spread-o").textContent = `${spread}%`;
+          document.getElementById("e-fills-o").textContent = usd(fills);
+          const cost = (cap * hurdle) / 100;
+          const income = (fills * spread) / 100;
+          const gap = Math.max(0, cost - income);
+          document.getElementById("e-fee").textContent =
+            gap === 0 ? "None" : `${((gap / cap) * 100).toFixed(1)}% a year`;
+          document.getElementById("e-be").textContent = usd(
+            cost / (spread / 100)
+          );
+          svg.innerHTML = "";
+          const max = Math.max(cost, income, 1) * 1.15;
+          const W = 300,
+            X = 130;
+          for (const [name, v, col, yy] of [
+            ["Capital cost", cost, C.ink, 14],
+            ["Trading income", income, C.usdc, 60],
+          ]) {
+            txt(svg, X - 10, yy + 19, name, {
+              "text-anchor": "end",
+              "font-size": 14,
+              fill: C.ink,
+            });
+            const bw = Math.max(2, (v / max) * W);
+            el(
+              "rect",
+              { x: X, y: yy, width: bw, height: 28, rx: 3, fill: col },
+              svg
+            );
+            txt(svg, X + bw + 8, yy + 19, usd(v), {
+              "font-size": 14,
+              "font-weight": 700,
+              fill: C.ink,
+            });
+          }
+          if (gap > 0) {
+            const x1 = X + (income / max) * W,
+              x2 = X + (cost / max) * W;
+            el(
+              "rect",
+              {
+                x: x1 + 2,
+                y: 60,
+                width: Math.max(0, x2 - x1 - 2),
+                height: 28,
+                rx: 3,
+                fill: "none",
+                stroke: C.fail,
+                "stroke-dasharray": "5 4",
+                "stroke-width": 2,
+              },
+              svg
+            );
+            txt(svg, X, 120, `${usd(gap)} gap a reservation fee must cover`, {
+              "font-size": 14,
+              fill: C.fail,
+              "font-weight": 700,
+            });
+          } else {
+            txt(svg, X, 120, "Fills alone cover the cost of capital", {
+              "font-size": 14,
+              fill: C.usdc,
+              "font-weight": 700,
+            });
+          }
+        }
+        ids.forEach((id) =>
+          document.getElementById(id).addEventListener("input", render)
+        );
+        render();
+      })();
+
+      /* ---------- Copy ---------- */
+      document.getElementById("copy").onclick = async (e) => {
+        try {
+          await navigator.clipboard.writeText(
+            document.getElementById("msg").textContent
+          );
+          e.target.textContent = "Copied";
+        } catch {
+          e.target.textContent = "Select the text to copy";
+        }
+        setTimeout(() => (e.target.textContent = "Copy message"), 2000);
+      };
+    </script>
   </body>
 </html>
