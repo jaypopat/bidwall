@@ -1,0 +1,945 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bidwall — the flow, explained</title>
+    <style>
+      :root {
+        --bg: #0f1612;
+        --panel: #151e19;
+        --line: #26332b;
+        --text: #dfe7e1;
+        --muted: #8fa197;
+        --accent: #7fd6a4;
+        --warn: #e8b86a;
+        --bad: #e07a6f;
+        --blue: #8ab4f0;
+        --mono: "IBM Plex Mono", ui-monospace, monospace;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font:
+          16px/1.6 "IBM Plex Sans",
+          system-ui,
+          sans-serif;
+      }
+      main {
+        max-width: 920px;
+        margin: 0 auto;
+        padding: 56px 24px 96px;
+      }
+      h1 {
+        font-size: 2.1rem;
+        line-height: 1.2;
+        margin: 0 0 12px;
+      }
+      h2 {
+        font-size: 1.35rem;
+        margin: 64px 0 8px;
+        padding-top: 16px;
+        border-top: 1px solid var(--line);
+      }
+      h2 .n {
+        color: var(--accent);
+        font-family: var(--mono);
+        margin-right: 10px;
+      }
+      h3 {
+        font-size: 1.05rem;
+        margin: 24px 0 6px;
+      }
+      p,
+      li {
+        color: var(--text);
+      }
+      .lede {
+        font-size: 1.15rem;
+        color: var(--muted);
+        max-width: 720px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      code,
+      .mono {
+        font-family: var(--mono);
+        font-size: 0.88em;
+      }
+      .callout {
+        border-left: 3px solid var(--accent);
+        background: var(--panel);
+        padding: 14px 18px;
+        margin: 20px 0;
+        border-radius: 0 6px 6px 0;
+      }
+      .callout.warn {
+        border-color: var(--warn);
+      }
+      .callout.bad {
+        border-color: var(--bad);
+      }
+      .grid {
+        display: grid;
+        gap: 14px;
+      }
+      .g2 {
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      }
+      .g3 {
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      }
+      .card {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px 18px;
+      }
+      .card h3 {
+        margin-top: 0;
+      }
+      .card p {
+        margin: 6px 0;
+        font-size: 0.95rem;
+      }
+      .tag {
+        display: inline-block;
+        font-family: var(--mono);
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        padding: 2px 8px;
+        border-radius: 99px;
+        border: 1px solid var(--line);
+        color: var(--muted);
+      }
+      .tag.ok {
+        color: var(--accent);
+        border-color: var(--accent);
+      }
+      .tag.no {
+        color: var(--bad);
+        border-color: var(--bad);
+      }
+      .tag.maybe {
+        color: var(--warn);
+        border-color: var(--warn);
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0;
+        font-size: 0.93rem;
+      }
+      th,
+      td {
+        text-align: left;
+        padding: 8px 10px;
+        border-bottom: 1px solid var(--line);
+        vertical-align: top;
+      }
+      th {
+        color: var(--muted);
+        font-weight: 500;
+      }
+      td.num {
+        text-align: right;
+        font-family: var(--mono);
+      }
+      .bars .row {
+        display: grid;
+        grid-template-columns: 70px 1fr 80px;
+        align-items: center;
+        gap: 10px;
+        margin: 6px 0;
+        font-size: 0.9rem;
+      }
+      .bars .track {
+        height: 14px;
+        background: var(--panel);
+        border-radius: 3px;
+        overflow: hidden;
+      }
+      .bars .fill {
+        height: 100%;
+        background: var(--bad);
+      }
+      .timeline {
+        display: grid;
+        grid-template-columns: repeat(6, 1fr);
+        gap: 6px;
+        margin: 18px 0;
+      }
+      .timeline div {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 6px;
+        padding: 10px;
+        font-size: 0.85rem;
+      }
+      .timeline b {
+        display: block;
+        font-family: var(--mono);
+        color: var(--accent);
+        font-size: 0.78rem;
+        margin-bottom: 4px;
+      }
+      .timeline .lock {
+        border-color: var(--warn);
+      }
+      .timeline .lock b {
+        color: var(--warn);
+      }
+      @media (max-width: 720px) {
+        .timeline {
+          grid-template-columns: repeat(2, 1fr);
+        }
+      }
+      ol.steps {
+        counter-reset: s;
+        list-style: none;
+        padding: 0;
+      }
+      ol.steps li {
+        counter-increment: s;
+        position: relative;
+        padding: 8px 0 8px 42px;
+        border-bottom: 1px dashed var(--line);
+      }
+      ol.steps li::before {
+        content: counter(s);
+        position: absolute;
+        left: 0;
+        top: 8px;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        background: var(--panel);
+        border: 1px solid var(--accent);
+        color: var(--accent);
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        display: grid;
+        place-items: center;
+      }
+      svg text {
+        font-family: "IBM Plex Sans", system-ui, sans-serif;
+        fill: var(--text);
+      }
+      .q li {
+        margin: 6px 0;
+      }
+      pre {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        padding: 16px;
+        white-space: pre-wrap;
+        font-family: var(--mono);
+        font-size: 0.85rem;
+        line-height: 1.55;
+      }
+      nav {
+        font-size: 0.9rem;
+        color: var(--muted);
+        margin-top: 24px;
+      }
+      nav a {
+        color: var(--accent);
+        text-decoration: none;
+        margin-right: 14px;
+        white-space: nowrap;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <p class="tag">Bidwall · flow explainer · 3 October 2026</p>
+      <h1>
+        A buyer that can't disappear when a tokenized-stock loan has to be
+        liquidated
+      </h1>
+      <p class="lede">
+        Bidwall lets a capital provider lock USDC into a fixed-price, fixed-term
+        bid for NVDAx collateral. When a Kamino loan backed by NVDAx becomes
+        liquidatable, that bid can repay the debt and receive the collateral in
+        a single atomic transaction.
+      </p>
+      <nav>
+        <a href="#problem">1 · Problem</a><a href="#cast">2 · Who's involved</a
+        ><a href="#compare">3 · Without vs with</a
+        ><a href="#lifecycle">4 · Bid lifecycle</a
+        ><a href="#tx">5 · The transaction</a
+        ><a href="#fill">6 · When it fills</a
+        ><a href="#proof">7 · What's proven</a
+        ><a href="#econ">8 · The open question</a
+        ><a href="#outreach">9 · Vetting with Superteam</a
+        ><a href="#next">10 · Next steps</a>
+      </nav>
+
+      <!-- 1 -->
+      <h2 id="problem"><span class="n">01</span>The problem</h2>
+      <p>
+        On Kamino you can deposit tokenized stocks such as NVDAx as collateral
+        and borrow USDC against them. When the stock falls far enough, the loan
+        becomes <b>liquidatable</b>: someone repays part of the debt and takes
+        collateral at a discount (the liquidation bonus). That "someone" is a
+        liquidator bot, which normally sells the collateral straight away on a
+        DEX to lock in its profit.
+      </p>
+      <p>
+        That works only if the collateral can actually be sold. Kamino values
+        NVDAx with an oracle price, but the oracle tells you what the stock is
+        <i>worth</i>, not how much of it the on-chain market can <i>absorb</i>.
+        Our 20 September Jupiter quote snapshot (indicative quotes only, nothing
+        executed) showed:
+      </p>
+      <div class="bars card">
+        <div class="row">
+          <span class="mono">$100k</span>
+          <div class="track"><div class="fill" style="width: 0.2%"></div></div>
+          <span class="mono">+0.04%</span>
+        </div>
+        <div class="row">
+          <span class="mono">$250k</span>
+          <div class="track"><div class="fill" style="width: 1.2%"></div></div>
+          <span class="mono">−0.39%</span>
+        </div>
+        <div class="row">
+          <span class="mono">$500k</span>
+          <div class="track"><div class="fill" style="width: 8%"></div></div>
+          <span class="mono">−2.73%</span>
+        </div>
+        <div class="row">
+          <span class="mono">$1M</span>
+          <div class="track"><div class="fill" style="width: 100%"></div></div>
+          <span class="mono">−33.85%</span>
+        </div>
+        <p class="muted" style="font-size: 0.82rem; margin-top: 10px">
+          NVDAx sell quotes versus Jupiter spot price by size. Bar widths are
+          scaled to the $1M figure. Other xStocks looked worse: METAx quoted
+          −76.6% at $1M.
+        </p>
+      </div>
+      <div class="callout warn">
+        <b>Why it matters:</b> if a large NVDAx position has to be liquidated
+        and the only exit is a thin DEX pool, liquidators may decline
+        (unprofitable) or sell at a large loss. If no one liquidates in time,
+        the lender is left with <b>bad debt</b>. Bidwall's answer is to arrange
+        a buyer in advance, with funds locked, before the crash happens.
+      </div>
+      <p class="muted">
+        Caveat: Kamino doesn't have to dump a whole $1M position in one trade.
+        Partial liquidations and auctions exist. The quote table is a signal
+        worth investigating, not proof that lenders lose those amounts.
+      </p>
+
+      <!-- 2 -->
+      <h2 id="cast"><span class="n">02</span>Who's involved</h2>
+      <div class="grid g3">
+        <div class="card">
+          <span class="tag">Borrower</span>
+          <h3>Has the loan</h3>
+          <p>
+            Deposited NVDAx and borrowed USDC on Kamino. Gets liquidated if
+            NVDAx falls too far. Under Bidwall, the borrower receives any
+            surplus from the fixed bid price.
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag">Lender</span>
+          <h3>Kamino Lend v2</h3>
+          <p>
+            Decides whether a loan is liquidatable, how much debt can be repaid
+            and how much collateral is released. Bidwall
+            <b>never overrides</b> these rules. It calls Kamino's own
+            liquidation instruction.
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag ok">Provider</span>
+          <h3>Funds the bid</h3>
+          <p>
+            A market maker or specialist fund. Locks USDC, for example: "up to
+            10 NVDAx at $150, until Friday." Can't withdraw or reprice until the
+            bid expires. Receives NVDAx when the bid fills.
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag">Keeper</span>
+          <h3>Pulls the trigger</h3>
+          <p>
+            Spots a liquidatable loan and submits the settlement transaction.
+            Bidwall only lets the keeper named on the market do this, and the
+            keeper can't redirect any funds.
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag maybe">Curator / risk team</span>
+          <h3>Possibly pays for it</h3>
+          <p>
+            Whoever runs the lending market. The hypothesis is that they'd pay a
+            fee to have guaranteed buyers on standby. <b>Unvalidated.</b>
+          </p>
+        </div>
+        <div class="card">
+          <span class="tag">Bidwall</span>
+          <h3>The program</h3>
+          <p>
+            Holds escrow, enforces the lock, checks every token movement and
+            makes the whole liquidation all-or-nothing.
+          </p>
+        </div>
+      </div>
+
+      <!-- 3 -->
+      <h2 id="compare"><span class="n">03</span>Without vs with Bidwall</h2>
+      <div class="grid g2">
+        <div class="card">
+          <span class="tag no">Today</span>
+          <ol>
+            <li>NVDAx crashes, and the loan becomes liquidatable.</li>
+            <li>
+              A liquidator weighs it up: "Can I sell the seized NVDAx for more
+              than I repay?"
+            </li>
+            <li>
+              With thin DEX depth and a large size, the answer may be
+              <b>no</b>, so no one acts, or someone acts and dumps into the
+              pool.
+            </li>
+            <li>The loan sits underwater and Kamino risks bad debt.</li>
+          </ol>
+        </div>
+        <div class="card">
+          <span class="tag ok">With Bidwall</span>
+          <ol>
+            <li>
+              Days earlier, a provider locked 1,500 USDC to buy NVDAx at a fixed
+              price.
+            </li>
+            <li>NVDAx crashes, and the loan becomes liquidatable.</li>
+            <li>
+              The keeper submits one transaction: the escrow repays the debt and
+              the NVDAx goes to the provider. No DEX sale is needed.
+            </li>
+            <li>
+              The debt is repaid, the borrower receives any surplus, and the
+              provider holds the NVDAx and can exit slowly.
+            </li>
+          </ol>
+        </div>
+      </div>
+      <div class="callout">
+        <b>The core idea:</b> the bid replaces the forced DEX sale. The provider
+        absorbs the price risk and exits on its own schedule, and collateral
+        never has to hit a thin pool during a crash. Funds are escrowed
+        on-chain, so the buyer can't pull out at the worst moment.
+      </div>
+
+      <!-- 4 -->
+      <h2 id="lifecycle"><span class="n">04</span>Bid lifecycle</h2>
+      <div class="timeline">
+        <div><b>create</b>Terms: market, price, quantity, start, expiry</div>
+        <div><b>fund</b>Provider deposits the maximum USDC cost</div>
+        <div><b>activate</b>Bid becomes live and locked</div>
+        <div class="lock">
+          <b>locked window</b>No cancel, no reprice, no withdrawal
+        </div>
+        <div><b>settle ×N</b>Each liquidation consumes some capacity</div>
+        <div><b>expire → withdraw</b>Provider reclaims unused USDC</div>
+      </div>
+      <p>
+        Bid terms are explicit integers. Price is stored as
+        <span class="mono">USDC atoms per 10⁸ raw NVDAx atoms</span>. NVDAx is a
+        Token-2022 token with a UI multiplier, so "raw units" and "shares on
+        screen" can differ. Every receipt uses raw units. A bid can be filled
+        partially several times until it is exhausted or expires.
+      </p>
+
+      <!-- 5 -->
+      <h2 id="tx"><span class="n">05</span>Inside the one transaction</h2>
+      <p>
+        These are the actual numbers from the local demo, a real Kamino loan
+        captured from mainnet and replayed offline with the oracle pushed down
+        from 225 to 150:
+      </p>
+      <svg
+        viewBox="0 0 860 330"
+        width="100%"
+        role="img"
+        aria-label="Settlement money flow"
+      >
+        <defs>
+          <marker
+            id="ah"
+            viewBox="0 0 10 10"
+            refX="9"
+            refY="5"
+            markerWidth="7"
+            markerHeight="7"
+            orient="auto"
+          >
+            <path d="M0,0 L10,5 L0,10 z" fill="#8fa197" />
+          </marker>
+        </defs>
+        <g font-size="13">
+          <rect
+            x="10"
+            y="20"
+            width="200"
+            height="90"
+            rx="8"
+            fill="#151e19"
+            stroke="#7fd6a4"
+          />
+          <text x="24" y="46" font-weight="600">Bid escrow</text>
+          <text x="24" y="68" fill="#8fa197">1,500.000000 USDC locked</text>
+          <text x="24" y="90" fill="#8fa197">capacity 10 × 10⁸ raw NVDAx</text>
+
+          <rect
+            x="330"
+            y="20"
+            width="200"
+            height="90"
+            rx="8"
+            fill="#151e19"
+            stroke="#8ab4f0"
+          />
+          <text x="344" y="46" font-weight="600">Kamino (lender)</text>
+          <text x="344" y="68" fill="#8fa197">checks loan is unhealthy</text>
+          <text x="344" y="90" fill="#8fa197">applies its own bonus/fees</text>
+
+          <rect
+            x="650"
+            y="20"
+            width="200"
+            height="90"
+            rx="8"
+            fill="#151e19"
+            stroke="#7fd6a4"
+          />
+          <text x="664" y="46" font-weight="600">Provider</text>
+          <text x="664" y="68" fill="#8fa197">receives collateral</text>
+
+          <rect
+            x="330"
+            y="220"
+            width="200"
+            height="90"
+            rx="8"
+            fill="#151e19"
+            stroke="#e8b86a"
+          />
+          <text x="344" y="246" font-weight="600">Borrower</text>
+          <text x="344" y="268" fill="#8fa197">receives the surplus</text>
+
+          <rect
+            x="10"
+            y="220"
+            width="200"
+            height="90"
+            rx="8"
+            fill="#151e19"
+            stroke="#26332b"
+          />
+          <text x="24" y="246" font-weight="600">Escrow after fill</text>
+          <text x="24" y="268" fill="#8fa197">905.37 USDC left</text>
+          <text x="24" y="290" fill="#8fa197">withdrawable after expiry</text>
+
+          <line
+            x1="210"
+            y1="55"
+            x2="328"
+            y2="55"
+            stroke="#8fa197"
+            marker-end="url(#ah)"
+          />
+          <text x="216" y="44" fill="#7fd6a4">566.38 USDC</text>
+          <text x="216" y="78" fill="#8fa197" font-size="11">
+            debt repayment
+          </text>
+
+          <line
+            x1="530"
+            y1="55"
+            x2="648"
+            y2="55"
+            stroke="#8fa197"
+            marker-end="url(#ah)"
+          />
+          <text x="536" y="44" fill="#7fd6a4">396,422,366 raw</text>
+          <text x="536" y="78" fill="#8fa197" font-size="11">
+            NVDAx atoms (3.964 × 10⁸)
+          </text>
+
+          <line
+            x1="160"
+            y1="110"
+            x2="360"
+            y2="218"
+            stroke="#8fa197"
+            marker-end="url(#ah)"
+          />
+          <text x="200" y="185" fill="#e8b86a">28.26 USDC</text>
+          <text x="200" y="201" fill="#8fa197" font-size="11">
+            price × qty − repayment
+          </text>
+
+          <line
+            x1="110"
+            y1="110"
+            x2="110"
+            y2="218"
+            stroke="#26332b"
+            stroke-dasharray="4 4"
+            marker-end="url(#ah)"
+          />
+          <text x="560" y="250" fill="#8fa197" font-size="12">
+            Bid price: 150 USDC per 10⁸ raw
+          </text>
+          <text x="560" y="270" fill="#8fa197" font-size="12">
+            3.964 × 150 = 594.63 USDC total
+          </text>
+          <text x="560" y="290" fill="#8fa197" font-size="12">
+            = 566.38 repay + 28.26 surplus
+          </text>
+        </g>
+      </svg>
+      <h3>Step by step (all one transaction)</h3>
+      <ol class="steps">
+        <li>
+          The keeper adds Kamino's own <b>refresh</b> instructions so the
+          reserve, oracle and loan data are current.
+        </li>
+        <li>
+          Bidwall checks the bid is active, inside its time window, called by
+          the authorised keeper, and quoted against the
+          <b>current</b> bid and loan state, which blocks replays.
+        </li>
+        <li>
+          Up to <code>max_repay</code> USDC moves from escrow to a Bidwall-owned
+          liquidator account. Kamino never gets control of the escrow.
+        </li>
+        <li>
+          Bidwall calls Kamino's real
+          <code>liquidate_obligation_and_redeem_reserve_collateral_v2</code>.
+          Kamino rejects healthy loans and stale prices on its own.
+        </li>
+        <li>
+          Bidwall measures what actually happened: the debt went down, the
+          collateral came out, and nothing is stuck in the middle.
+        </li>
+        <li>
+          It prices the NVDAx actually delivered at the fixed bid price. If that
+          doesn't cover the repayment, the transaction
+          <b>reverts</b>.
+        </li>
+        <li>
+          NVDAx goes to the provider, the surplus to the borrower, and unused
+          repay budget back to escrow.
+        </li>
+        <li>
+          Capacity is reduced and an event is emitted. If any check fails,
+          <b>everything</b> rolls back, including Kamino's part.
+        </li>
+      </ol>
+
+      <!-- 6 -->
+      <h2 id="fill"><span class="n">06</span>When does a bid actually fill?</h2>
+      <p>
+        A fill happens only if
+        <b>bid price × collateral released ≥ debt repaid</b>. Kamino releases
+        collateral worth roughly <i>repayment × (1 + bonus)</i> at the oracle
+        price. In the demo 594.63 / 566.38 ≈ 1.05, so the bonus (net of Kamino
+        fees) was about 5%. That means the bid can fill only when it is
+        <b>no more than about 5% below the oracle</b>.
+      </p>
+      <div class="grid g2">
+        <div class="card">
+          <h3>Who keeps the liquidation bonus?</h3>
+          <p>
+            With an ordinary liquidator, the liquidator keeps the bonus. With
+            Bidwall, the provider pays its fixed price and any amount above the
+            debt goes back to the <b>borrower</b>. The provider earns from
+            buying below where NVDAx later trades, not from the bonus.
+          </p>
+        </div>
+        <div class="card">
+          <h3>It's an option the provider gives away</h3>
+          <p>
+            The bid is used only when NVDAx has crashed and the oracle is near
+            the bid price, which is exactly when the provider would rather not
+            buy. This is the business's central tension. Someone has to pay the
+            provider to keep that option open.
+          </p>
+        </div>
+      </div>
+      <div class="callout">
+        <b>Where Bidwall wins:</b> large liquidations in thin markets, where an
+        ordinary liquidator can't sell the seized collateral profitably. When
+        DEX depth is fine, ordinary liquidators take the loan first and Bidwall
+        isn't needed. Bidwall is the <b>buyer of last resort</b>, not a
+        replacement for liquidators.
+      </div>
+
+      <!-- 7 -->
+      <h2 id="proof"><span class="n">07</span>What's proven and what isn't</h2>
+      <table>
+        <tr>
+          <th>Claim</th>
+          <th>Status</th>
+          <th>Evidence</th>
+        </tr>
+        <tr>
+          <td>
+            Funded bid lifecycle (create, fund, lock, fill, expire, withdraw)
+          </td>
+          <td><span class="tag ok">proven</span></td>
+          <td>42 Rust tests, including adversarial ones</td>
+        </tr>
+        <tr>
+          <td>
+            Settles through <b>real</b> Kamino v2 liquidation (not a mock)
+          </td>
+          <td><span class="tag ok">proven</span></td>
+          <td>Mainnet fork plus offline replay of captured Kamino binaries</td>
+        </tr>
+        <tr>
+          <td>Atomic rollback on any failure</td>
+          <td><span class="tag ok">proven</span></td>
+          <td>Before/after account comparison in failure tests</td>
+        </tr>
+        <tr>
+          <td>
+            Replay, overfill, wrong-mint and unauthorised-keeper attacks blocked
+          </td>
+          <td><span class="tag ok">proven</span></td>
+          <td>Dedicated tests</td>
+        </tr>
+        <tr>
+          <td>One-click demo with verified receipt</td>
+          <td><span class="tag ok">proven</span></td>
+          <td><code>npm run dev:demo</code></td>
+        </tr>
+        <tr>
+          <td>The crash scenario</td>
+          <td><span class="tag maybe">simulated</span></td>
+          <td>
+            Oracle pushed down locally. The loan, reserves and binaries are real
+          </td>
+        </tr>
+        <tr>
+          <td>Users can enter their own bids with a wallet</td>
+          <td><span class="tag no">not built</span></td>
+          <td>Console is a scripted launcher</td>
+        </tr>
+        <tr>
+          <td>Live comparison quote for the same size</td>
+          <td><span class="tag no">not built</span></td>
+          <td>Quote observer is outstanding</td>
+        </tr>
+        <tr>
+          <td>Deployed on mainnet or devnet</td>
+          <td><span class="tag no">no</span></td>
+          <td>Local only. Devnet can't reproduce the Kamino market</td>
+        </tr>
+        <tr>
+          <td>A market maker would fund bids on useful terms</td>
+          <td><span class="tag no">unvalidated</span></td>
+          <td><b>No conversations yet</b></td>
+        </tr>
+        <tr>
+          <td>A curator or lender would pay for this capacity</td>
+          <td><span class="tag no">unvalidated</span></td>
+          <td><b>No conversations yet</b></td>
+        </tr>
+      </table>
+
+      <!-- 8 -->
+      <h2 id="econ"><span class="n">08</span>The open question</h2>
+      <div class="callout bad">
+        <b>
+          Will someone pay enough for a non-cancellable liquidation bid that a
+          provider will supply it on useful terms?
+        </b>
+      </div>
+      <p>Illustration from the brief, not a market quote:</p>
+      <ul>
+        <li>
+          $2M locked for a year at an 8% cost of capital costs <b>$160k</b>.
+        </li>
+        <li>
+          At a 3% spread, that needs about <b>$5.3M of fills a year</b> just to
+          break even, before losses and hedging.
+        </li>
+        <li>
+          Liquidations are rare, so trading income alone probably doesn't cover
+          it. A <b>reservation fee</b> paid by someone (the lender, curator or
+          vault) is likely needed.
+        </li>
+      </ul>
+      <p>
+        Precedent: B.Protocol ran funded liquidation backstops on Ethereum, so
+        the category isn't new. Bidwall's specific angle is term-locked,
+        asset-specific capacity that anyone can inspect, plugged directly into
+        Kamino's liquidation path for tokenized equities.
+      </p>
+      <p class="muted">
+        If a market maker and a curator both say "no", Bidwall is still solid
+        infrastructure research and a strong hackathon technical submission. It
+        just isn't a validated business.
+      </p>
+
+      <!-- 9 -->
+      <h2 id="outreach">
+        <span class="n">09</span>Vetting with your Superteam contacts
+      </h2>
+      <p>
+        The goal of each conversation is a <b>concrete answer</b>, not "sounds
+        interesting". A clear "no, because…" is just as useful. Pick the
+        questions that fit each person.
+      </p>
+      <div class="grid g2">
+        <div class="card q">
+          <span class="tag">Kamino / lending people</span>
+          <ul>
+            <li>
+              How do xStocks liquidations actually play out today? Who are the
+              liquidators, and have any been missed or slow?
+            </li>
+            <li>
+              Is exit depth for large NVDAx/SPYx positions something the risk
+              team worries about? Does it cap collateral limits?
+            </li>
+            <li>
+              Would a curator or vault (e.g. Sentora/Veda-style) pay a fee for
+              guaranteed liquidation buyers? Who holds that budget?
+            </li>
+            <li>
+              Would Kamino ever recognise committed capacity in its risk
+              settings?
+            </li>
+          </ul>
+        </div>
+        <div class="card q">
+          <span class="tag">Market makers / liquidators</span>
+          <ul>
+            <li>
+              Would you lock USDC for NVDAx at a fixed price for a fixed term?
+              Roughly what discount, size and duration?
+            </li>
+            <li>What reservation fee (annualised %) would make it worth it?</li>
+            <li>
+              Can you hedge NVDAx inventory off-chain (perps, TradFi), and how
+              fast?
+            </li>
+            <li>
+              Is "can't cancel during the term" a dealbreaker? What would make
+              it acceptable?
+            </li>
+          </ul>
+        </div>
+        <div class="card q">
+          <span class="tag">Builders / mentors</span>
+          <ul>
+            <li>Is the story clear in 60 seconds? What confused you?</li>
+            <li>
+              For judges: does a real Kamino CPI plus an offline replay land, or
+              do we need something live?
+            </li>
+            <li>Who should we talk to at Kamino, xStocks/Backed or an MM?</li>
+          </ul>
+        </div>
+        <div class="card q">
+          <span class="tag">What counts as a signal</span>
+          <ul>
+            <li>
+              <span class="tag ok">strong</span> An indicative term sheet: price
+              rule, size, duration, fee.
+            </li>
+            <li>
+              <span class="tag ok">strong</span> A named decision a curator
+              would make differently.
+            </li>
+            <li>
+              <span class="tag maybe">weak</span> "Interesting, keep me posted."
+            </li>
+            <li>
+              <span class="tag no">useful no</span> "Liquidations already work,
+              because X."
+            </li>
+          </ul>
+        </div>
+      </div>
+      <h3>Message you can adapt</h3>
+      <pre>
+Hey [name], I'm building Bidwall for the Colosseum hackathon and would value 15 minutes of your honest take.
+
+The problem: tokenized stocks like NVDAx are used as collateral on Kamino, but on-chain exit depth is thin. A $1M NVDAx sell quoted ~34% below spot in our snapshot, so a large liquidation in a crash may have no good buyer.
+
+What we built: a market maker locks USDC into a fixed-price, fixed-term bid for NVDAx that can't be cancelled. When a Kamino loan becomes liquidatable, one atomic transaction repays the debt from that escrow and delivers the collateral to the MM. It works against Kamino's real v2 liquidation program (mainnet fork and replay), with 42 tests.
+
+What I'm trying to learn: [pick one]
+- Would a curator or lender pay a fee to have committed buyers on standby?
+- As an MM, what discount, size, term and fee would make you lock capital like this?
+- Is exit liquidity for xStocks actually a problem you've seen, or do liquidations already work fine?
+
+A "no, because..." is genuinely useful. Happy to show the demo.</pre>
+
+      <!-- 10 -->
+      <h2 id="next"><span class="n">10</span>Next steps</h2>
+      <table>
+        <tr>
+          <th>#</th>
+          <th>Task</th>
+          <th>Why</th>
+        </tr>
+        <tr>
+          <td>1</td>
+          <td>Send 3–5 Superteam messages (section 9)</td>
+          <td>Only thing that answers "is this worth continuing"</td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td>
+            Quote observer: bounded Jupiter quote for the same raw NVDAx amount
+          </td>
+          <td>
+            Honest "DEX exit vs committed bid" comparison; required by the brief
+          </td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td>Choose one name (Bidwall or Backstop)</td>
+          <td>The docs currently use both</td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td>Record the demo video and write the submission</td>
+          <td>The scripted console is enough to show judges</td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td>Wallet-driven bid entry, only if time remains</td>
+          <td>Most expensive item; adds the least to the submission</td>
+        </tr>
+      </table>
+      <p class="muted" style="margin-top: 40px">
+        Sources: <code>docs/RWA-LIQUIDATION-DEPTH.md</code> (brief),
+        <code>docs/RWA-LIQUIDATION-DEPTH-REVIEW.md</code> (critical review),
+        <code>docs/KAMINO-INTEGRATION.md</code> and
+        <code>docs/OPERATOR-DEMO.md</code> (settlement evidence and demo
+        figures).
+      </p>
+    </main>
+  </body>
+</html>
