@@ -4,7 +4,7 @@
     "anchor-build": "node scripts/local-program-keys.mjs && cd anchor && env -u APPIMAGE -u APPDIR NO_DNA=1 anchor build",
     "anchor-test": "npm run anchor-build && env -u APPIMAGE -u APPDIR NO_DNA=1 cargo test --manifest-path anchor/Cargo.toml --workspace",
     "build": "next build",
-    "ci": "npm run build && npm run lint && npm run format:check",
+    "ci": "npm run build && npm run lint && npm run format:check && npm run typecheck:scripts && npm run test:quotes",
     "codama:js": "codama -c codama.bidwall.json run js",
     "dev": "next dev",
     "dev:demo": "BIDWALL_LOCAL_DEMO=1 next dev --hostname 127.0.0.1",
@@ -18,7 +18,11 @@
     "codama:bidwall": "codama -c codama.bidwall.json run js",
     "client:build": "tsc -p tsconfig.client.json",
     "test:client": "npm run client:build && node --test tests/client/*.test.mjs",
-    "demo:kamino": "npm run anchor-build && npm run client:build && node scripts/demo/run.mjs"
+    "demo:kamino": "npm run anchor-build && npm run client:build && node scripts/demo/run.mjs",
+    "quotes:observe": "bun scripts/quotes/observe.ts",
+    "quotes:report": "bun scripts/quotes/report.ts",
+    "test:quotes": "bun test tests/quotes",
+    "typecheck:scripts": "tsc --noEmit -p tsconfig.scripts.json"
   },
   "description": "Funded, term-bound NVDAx/USDC liquidation bids settled through Kamino",
   "keywords": [
@@ -54,6 +58,7 @@
     "@codama/nodes-from-anchor": "1.5.3",
     "@codama/renderers-js": "1.7.1",
     "@tailwindcss/postcss": "^4",
+    "@types/bun": "^1.4.2",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
