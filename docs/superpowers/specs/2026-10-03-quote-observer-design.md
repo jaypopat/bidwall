@@ -1,5 +1,9 @@
 # Quote observer: design
 
+> **Amended 3 October 2026:** the tracked basket is now every xStock held as
+> collateral in Kamino's public xStocks market (see `scripts/quotes/tokens.ts`);
+> METAx was dropped and MSTRx, GOOGLx, QQQx, CRCLx and HOODx added.
+
 3 October 2026 · status: awaiting review
 
 ## Purpose

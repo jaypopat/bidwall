@@ -82,9 +82,9 @@ describe("runObservation", () => {
       runner: "local",
       slippageBps: 50,
     });
-    expect(calls).toHaveLength(32);
-    expect(exchanges).toHaveLength(32);
-    expect(countOkQuotes(observation)).toBe(31);
+    expect(calls).toHaveLength(56); // 1 token lookup + 7 NVDAx lots + 8 tokens × 6
+    expect(exchanges).toHaveLength(56);
+    expect(countOkQuotes(observation)).toBe(55);
 
     const nvdax = token(observation, "NVDAx");
     expect(nvdax?.quotes.map((q) => q.lot)).toEqual([
@@ -120,13 +120,13 @@ describe("runObservation", () => {
       skipReason: "Token API reports 6 decimals, expected 8",
       quotes: [],
     });
-    expect(calls).toHaveLength(26);
+    expect(calls).toHaveLength(50);
   });
 
   test("skips a token the token API did not return", async () => {
-    const { observe } = market({ omit: ["METAx"] });
+    const { observe } = market({ omit: ["HOODx"] });
     const { observation } = await observe();
-    expect(token(observation, "METAx")).toMatchObject({
+    expect(token(observation, "HOODx")).toMatchObject({
       status: "skipped",
       skipReason: "Not returned by the token API",
     });
@@ -167,7 +167,7 @@ describe("runObservation", () => {
     const { observation } = await observe();
     expect(token(observation, "SPYx")?.quotes[0]).toMatchObject({
       status: "error",
-      error: `Quote does not match the request: inputMint asked ${TRACKED_TOKENS[4]?.mint}, quoted SomeOtherMint`,
+      error: `Quote does not match the request: inputMint asked ${token(observation, "SPYx")?.mint}, quoted SomeOtherMint`,
     });
   });
 

@@ -3,10 +3,12 @@
 Hourly evidence of how much tokenized-stock collateral the on-chain market can
 absorb, and how that changes when the US market is shut.
 
-**What it records:** Jupiter sell quotes into USDC for NVDAx, TSLAx, AAPLx,
-METAx and SPYx at $10k, $50k, $100k, $250k, $500k and $1M, plus the exact NVDAx
-lot the Bidwall demo settles (396,422,366 raw atoms). Each run is labelled with
-its US market session in New York time.
+**What it records:** Jupiter sell quotes into USDC for every xStock held as
+collateral in Kamino's public xStocks market (SPYx, MSTRx, GOOGLx, QQQx, TSLAx,
+NVDAx, CRCLx, HOODx, AAPLx) at $10k, $50k, $100k, $250k, $500k and $1M, plus the
+exact NVDAx lot the Bidwall demo settles (396,422,366 raw atoms). Each run is
+labelled with its US market session in New York time. Runs before 3 October
+2026 18:45 UTC covered NVDAx, TSLAx, AAPLx, METAx and SPYx only.
 
 **What it does not record:** executions. Every record says "Mainnet Jupiter
 quote, not executed". The reference price is Jupiter's, not Kamino's oracle.
@@ -14,7 +16,7 @@ quote, not executed". The reference price is Jupiter's, not Kamino's oracle.
 ## Run it
 
 ```sh
-bun scripts/quotes/observe.ts --out /tmp/bidwall-quotes   # one run, about 40 s
+bun scripts/quotes/observe.ts --out /tmp/bidwall-quotes   # one run, about 70 s
 bun scripts/quotes/report.ts --data /tmp/bidwall-quotes    # summary table
 npm run test:quotes                                        # offline tests
 ```
