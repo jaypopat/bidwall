@@ -30,7 +30,7 @@ chain ("$X covered at price P until date T") and set caps against.
 - **Loan book** (slot 453086228, 3 Oct 23:50 UTC): $5.33M USDC debt across 1,695
   loans; top 10 loans hold 40% of debt. $1.05M of debt is within a 20% uniform
   price drop of liquidation; $2.47M within 30%.
-- **Liquidation history:** 44,000 market transactions over 36 days contained two
+- **Liquidation history:** 60,000 market transactions over 45 days (20 August to 4 October) contained two
   liquidations, of $0.10 and $0.33. Kamino reports $0 bad debt. The liquidation
   route has not been tested at size.
 - **Exit depth** (Jupiter quotes, Saturday): $1M sells quote −0.1% SPYx,
