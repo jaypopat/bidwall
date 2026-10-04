@@ -108,3 +108,29 @@ numbers.
 **Open risks:** willingness to pay is unproven; Allez could add the joined view
 to KRAF; the forum posts above must be checked for independence before being
 cited.
+
+## Update after our own measurement (later on 4 October)
+
+[Reopen-gap measurement](2026-10-04-reopen-gap-measurement.md): pools track
+Hyperliquid weekend perps (median 0.19% apart); reopen gaps median 0.30%; LPs lost
+$190–$890 per weekend at reopenings across four pools and earned more in fees
+than they lost to arbitrage. This rules out three further candidates:
+
+- **Opening auction or session-aware LP protection.** Loss is small, and
+  prototypes already exist (Uncross call auction on Solana devnet, Credence
+  opening liquidation auction, MarketClock, GapGuard live on Robinhood Chain).
+- **Weekend liquidation backstop as the headline.** Reopen gaps sit inside the
+  liquidator's bonus, and Kamino's 20% close factor keeps first-step releases
+  within depth.
+- **Hedged xStock LP vault** (USDC in, LP plus Hyperliquid short). Marginal: about
+  15–30% net while the post-6-September volume regime lasts, roughly 3–5% if
+  volume reverts, capacity of about $2–5M, and a cross-chain hedge. Kamino
+  Liquidity has no xStock strategy yet, so it is a feature for them rather than
+  a company for us.
+
+**Decision:** keep Bidwall as the base and pitch it on evidence. Tokenized-stock
+lending is safe on Solana today because of two things we measured, partial
+liquidation and weekend perp tracking, and neither is guaranteed as lenders scale
+(Aave hubs, Venus, Monad). Bidwall measures how much of each stock's loan book is
+actually liquidatable and lets market makers commit capacity that raises it.
+GOOGLx is the worked example: 60% LTV, $0.79M pool, slowest convergence.
