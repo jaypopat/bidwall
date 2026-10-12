@@ -4,23 +4,21 @@ import { useCallback, useEffect, useState } from "react";
 import { Counterfactual } from "./components/story/counterfactual";
 import { DepthChart } from "./components/story/depth-chart";
 import { DemoNotice } from "./components/story/demo-notice";
-import { Liquidation } from "./components/story/liquidation";
+import { Liquidation, type StoryBeat } from "./components/story/liquidation";
 import { LiquidityField } from "./components/story/liquidity-field";
-import { CountUp, Reveal } from "./components/story/motion";
+import { Reveal } from "./components/story/motion";
 import { Ledger, Receipt } from "./components/story/proof";
 import { Trust } from "./components/story/trust";
-import { DEMO_TERMS, demoBudget } from "./lib/bidwall/demo-terms";
+import { DEMO_TERMS } from "./lib/bidwall/demo-terms";
 import type { DemoPair, DemoReceipt, DemoResponse } from "./lib/demo/types";
-import { timestamp, tokens, unixTime, usd } from "./lib/story/format";
-import { ONRE_ENGINE, RWA_DEBT, STOCK_DEBT } from "./lib/story/data";
+import { usd } from "./lib/story/format";
+import { ONRE_ENGINE, RWA_DEBT, OBSERVED_AT } from "./lib/story/data";
 import { RECORDED_RECEIPT } from "./lib/story/recorded";
 
 const NAV = [
-  ["problem", "Problem"],
-  ["versus", "Why it matters"],
-  ["liquidation", "Liquidation"],
-  ["trust", "Checks"],
-  ["proof", "Proof"],
+  ["problem", "Why it matters"],
+  ["liquidation", "The demo"],
+  ["proof", "Evidence"],
 ] as const;
 
 export default function Home() {
@@ -28,6 +26,7 @@ export default function Home() {
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string>();
   const [nextPair, setNextPair] = useState<DemoPair["id"]>();
+  const [view, setView] = useState<StoryBeat>("settled");
 
   const refresh = useCallback(async () => {
     try {
@@ -64,8 +63,7 @@ export default function Home() {
   // Shown values follow the receipt's own pair; the selector picks the next run.
   const selectedPair = nextPair ?? receipt?.pair.id ?? "onyc";
   const demo = DEMO_TERMS[receipt?.pair.id ?? selectedPair];
-  const { symbol, decimals } = demo.pair;
-  const budget = demoBudget(demo);
+  const { symbol } = demo.pair;
   const settlement = receipt?.settlement;
   const running = Boolean(data?.running);
   // The counterfactual is about ONyc: use this run if it is one, else the recording.
@@ -89,6 +87,7 @@ export default function Home() {
         );
       }
       setData((await response.json()) as DemoResponse);
+      setView("settled");
       document
         .getElementById("liquidation")
         ?.scrollIntoView({ behavior: "smooth" });
@@ -107,7 +106,7 @@ export default function Home() {
           ? "Run failed"
           : "No run yet";
   const error = requestError || data?.error || receipt?.error;
-  const clock = (seconds: string) => unixTime(seconds).split(", ")[1];
+  const watch = () => setView("settled");
 
   return (
     <div className="story">
@@ -118,7 +117,11 @@ export default function Home() {
         </a>
         <nav>
           {NAV.map(([id, label]) => (
-            <a key={id} href={`#${id}`}>
+            <a
+              key={id}
+              href={`#${id}`}
+              onClick={id === "liquidation" ? watch : undefined}
+            >
               {label}
             </a>
           ))}
@@ -138,99 +141,80 @@ export default function Home() {
       </header>
 
       <main id="top">
-        <section className="hero" id="problem">
+        <section className="hero" id="intro">
           <LiquidityField fracture={1} className="hero-field" />
           <div className="hero-inner">
-            <span className="kicker">01 · The problem</span>
+            <span className="kicker">Bidwall · committed exit liquidity</span>
             <h1>
-              Selling $5M of ONyc quoted{" "}
-              <em>
-                <CountUp
-                  to={43}
-                  duration={1800}
-                  format={(v) => String(Math.round(v)).padStart(2, "\u2007")}
-                />
-                %
-              </em>{" "}
-              less.
+              A buyer in place <em>before</em> a loan goes bad.
             </h1>
             <p className="lead">
-              {RWA_DEBT} is borrowed on Kamino against tokenized credit: ONyc,
-              USDe, AUTO and more. When those loans go bad, the collateral has
-              to be sold. A large sale can overwhelm the available exit.
+              Credit funds lock cash to buy a loan&apos;s collateral. When
+              Kamino liquidates, that cash repays the lender in one transaction.
             </p>
+            <div className="hero-actions">
+              <a className="btn-primary" href="#liquidation" onClick={watch}>
+                Watch the settlement <span aria-hidden>→</span>
+              </a>
+              <a className="hero-secondary" href="#problem">
+                Why it matters <span aria-hidden>↓</span>
+              </a>
+            </div>
             <p className="hero-source">
-              Jupiter quote · 12 Oct 2026 · versus oracle value
+              Prototype · local execution · test funds
             </p>
-            <a className="scroll-cue" href="#depth">
-              See the depth <span aria-hidden>↓</span>
-            </a>
           </div>
         </section>
 
-        <section className="band" id="depth">
-          <Reveal>
-            <DepthChart />
-          </Reveal>
-          <div className="facts">
-            <Reveal className="fact" delay={100}>
-              <strong>{RWA_DEBT}</strong>
-              <p>
-                stablecoin debt against RWA and yield tokens on Kamino.
-                Tokenized stocks: {STOCK_DEBT}.
-              </p>
-            </Reveal>
-            <Reveal className="fact" delay={200}>
-              <strong>{ONRE_ENGINE.share}</strong>
-              <p>
-                of OnRe&apos;s underwriting capital is allocated to ONyc
-                liquidity ({ONRE_ENGINE.date}).{" "}
-                <a href={ONRE_ENGINE.url} target="_blank" rel="noreferrer">
-                  Read OnRe&apos;s explanation ↗
-                </a>
-              </p>
-            </Reveal>
-          </div>
-        </section>
-
-        <section className="answer">
-          <Reveal as="p" className="answer-text">
-            <strong>Bidwall is a buyer that is already waiting.</strong> A fund
-            locks money in advance at a fixed price. When the lender liquidates,
-            the bid buys the collateral inside the same transaction. No DEX
-            depth needed for that fill. The aim: let issuers source this capital
-            from outside providers.
-          </Reveal>
-        </section>
-
-        <section className="band" id="versus">
+        <section className="band" id="problem">
           <Reveal as="h2">
-            <span className="kicker">02 · Why it matters</span>
-            The sale can cost more than the liquidation earns.
+            <span className="kicker">01 · The need</span>A large sale needs a
+            buyer.
           </Reveal>
           <Reveal as="p" className="body">
-            Small sales fit. At larger sizes, the exit can consume the
-            liquidator&apos;s entire margin. Explore the observed ONyc quotes,
-            then see the transaction that gives the sale a funded buyer.
+            ONyc is reinsurance-backed credit. Selling a large amount can return
+            too little to repay a loan.
           </Reveal>
-          <Counterfactual demo={DEMO_TERMS.onyc} receipt={onycReceipt} />
+          <Counterfactual
+            demo={DEMO_TERMS.onyc}
+            receipt={onycReceipt}
+            onWatch={watch}
+          />
+          <p className="source-line">
+            OnRe allocates {ONRE_ENGINE.share} of its capital to ONyc liquidity.{" "}
+            <a href={ONRE_ENGINE.url} target="_blank" rel="noreferrer">
+              Issuer-funded exits already exist ↗
+            </a>
+          </p>
         </section>
 
-        <section className="band" id="bid">
-          <div className="split">
-            <div>
-              <Reveal as="h2">
-                <span className="kicker">03 · The bid</span>A fixed price, paid
-                for upfront.
-              </Reveal>
-              <Reveal as="p" className="body" delay={80}>
-                A provider escrows USDC for one collateral token, at one price,
-                until one expiry. It can&apos;t be cancelled early, so lenders
-                and risk teams can inspect its price, remaining funds and
-                expiry.
-              </Reveal>
-              <div className="controls">
-                {data?.enabled && (
+        <section className="band" id="liquidation">
+          <Reveal as="h2">
+            <span className="kicker">02 · The proof</span>See who actually got
+            paid.
+          </Reveal>
+          <p className="body">
+            Captured {symbol} loan. Kamino&apos;s actual program. Local test
+            funds.
+          </p>
+          <Liquidation
+            demo={demo}
+            receipt={receipt}
+            running={running}
+            output={data?.output ?? []}
+            view={view}
+            onViewChange={setView}
+          />
+          <p className="honest">
+            {settlement
+              ? `This replay repays ${usd(settlement.repaidUsdcAtoms, 2)} USDC of debt. Large-scale coverage remains illustrative.`
+              : "Measured amounts appear after settlement. Large-scale coverage remains illustrative."}
+          </p>
+          {data?.enabled && (
+            <details className="evidence-detail local-run">
+              <summary>Run a fresh local replay</summary>
+              <div className="evidence-content">
+                <div className="controls">
                   <div
                     className="pair-switch"
                     role="radiogroup"
@@ -248,15 +232,9 @@ export default function Home() {
                       </button>
                     ))}
                   </div>
-                )}
-                {data?.enabled === false ? (
-                  <a className="btn-primary" href="#stage-settled">
-                    Watch verified settlement <span aria-hidden>→</span>
-                  </a>
-                ) : (
                   <button
                     className="btn-primary"
-                    disabled={loading || !data?.enabled || running}
+                    disabled={loading || running}
                     onClick={() => void run()}
                   >
                     {running
@@ -264,114 +242,114 @@ export default function Home() {
                       : `Run ${DEMO_TERMS[selectedPair].pair.symbol} scenario`}
                     <span aria-hidden>→</span>
                   </button>
-                )}
-              </div>
-              <p className="honest">
-                {data?.enabled === false
-                  ? `Recorded local execution · ${timestamp(RECORDED_RECEIPT.startedAt)} · test funds. Open “Demo info” to run it yourself.`
-                  : "Runs a fresh local replay of captured mainnet state against the real Kamino program, with test funds. Not deployed to mainnet."}
-              </p>
-              {error && (
-                <p className="error-bar" role="alert">
-                  {error}
+                </div>
+                <p className="honest">
+                  Runs captured mainnet state in a fresh local runtime. Open
+                  “Demo info” for setup.
                 </p>
-              )}
-            </div>
-            <Reveal className="terms-card" delay={120}>
-              <div className="terms-head">
-                <span>{demo.market}</span>
-                <span className="dot-live">Funded at start</span>
               </div>
-              <div className="terms-price">
-                {usd(demo.price, 2)}
-                <span>USDC per {symbol}</span>
-              </div>
-              <dl>
-                <div>
-                  <dt>Up to</dt>
-                  <dd>
-                    {tokens(demo.quantity, decimals)} {symbol}
-                  </dd>
-                </div>
-                <div>
-                  <dt>Funded upfront</dt>
-                  <dd>{usd(budget, 0)} USDC</dd>
-                </div>
-                <div>
-                  <dt>Local term</dt>
-                  <dd>
-                    {receipt?.commitment
-                      ? `${clock(receipt.commitment.start).replace(" UTC", "")}–${clock(receipt.commitment.expiry)}`
-                      : "One hour"}
-                  </dd>
-                </div>
-              </dl>
-              <div className="terms-dither" aria-hidden />
-            </Reveal>
-          </div>
+            </details>
+          )}
+          {error && (
+            <p className="error-bar" role="alert">
+              {error}
+            </p>
+          )}
         </section>
 
-        <section className="band" id="liquidation">
-          <Reveal as="h2">
-            <span className="kicker">04 · The liquidation</span>
-            Here is the money actually moving.
-          </Reveal>
-          <Reveal as="p" className="body">
-            A real captured {symbol} loan, test funds, and Kamino&apos;s
-            deployed program on a local replay. This repays $1,000 of debt; the
-            large-sale comparison above illustrates the need for capacity at
-            scale.
-          </Reveal>
-          <Liquidation
-            demo={demo}
-            receipt={receipt}
-            running={running}
-            output={data?.output ?? []}
+        <section className="band participants" id="value">
+          <LiquidityField
+            fracture={0}
+            floor={0.75}
+            className="participants-field"
           />
-        </section>
-
-        <section className="hold">
-          <LiquidityField fracture={0} floor={0.75} className="hold-field" />
-          <Reveal as="p" className="hold-text">
-            A funded buyer. A fixed price. One transaction.
-            <small>
-              {settlement
-                ? `${tokens(settlement.deliveredCollateralAtoms, decimals, 2)} ${symbol} bought at ${usd(demo.price, 2)}. No slippage, no DEX.`
-                : "Collateral bought at the bid price. No slippage, no DEX."}
-            </small>
-          </Reveal>
-        </section>
-
-        <section className="band" id="trust">
-          <Reveal as="h2">
-            <span className="kicker">05 · The checks</span>
-            What makes the commitment real?
-          </Reveal>
-          <Reveal as="p" className="body" delay={80}>
-            The same run tries early withdrawal, healthy-loan liquidation and a
-            stale fill. Then a separate replay spends a bid to zero and tries
-            again. Each attempt must be refused.
-          </Reveal>
-          <Trust demo={demo} receipt={receipt} running={running} />
+          <div className="participants-content">
+            <h2>Capital from outside the issuer.</h2>
+            <dl className="participant-roles">
+              <div>
+                <dt>The provider</dt>
+                <dd>
+                  Seeks a purchase discount. Takes credit, price and redemption
+                  risk.
+                </dd>
+              </div>
+              <div>
+                <dt>The issuer</dt>
+                <dd>
+                  Could rent exit capacity instead of funding it from its own
+                  balance sheet.
+                </dd>
+              </div>
+              <div>
+                <dt>The lender</dt>
+                <dd>
+                  Can inspect locked funds, a fixed price and an expiry.
+                  Capacity is finite.
+                </dd>
+              </div>
+            </dl>
+            <p className="honest">
+              Prototype · no outside provider has committed capital · no public
+              contract deployment
+            </p>
+          </div>
         </section>
 
         <section className="band" id="proof">
           <Reveal as="h2">
-            <span className="kicker">06 · Proof</span>Every step is on the
-            record.
+            <span className="kicker">03 · Dig deeper</span>Inspect the evidence.
           </Reveal>
-          <div className="proof-grid">
-            <Ledger receipt={receipt} running={running} />
-            <div className="proof-side">
-              <Receipt receipt={receipt} />
-            </div>
+          <div className="evidence-list">
+            <details className="evidence-detail">
+              <summary>
+                Safety checks{" "}
+                <span>
+                  {receipt?.status === "passed"
+                    ? "Passed in replay"
+                    : running
+                      ? "Running…"
+                      : "View checks"}
+                </span>
+              </summary>
+              <div className="evidence-content">
+                <Trust demo={demo} receipt={receipt} running={running} />
+              </div>
+            </details>
+            <details className="evidence-detail">
+              <summary>
+                Transactions and receipt <span>Full local record</span>
+              </summary>
+              <div className="evidence-content proof-grid">
+                <Ledger receipt={receipt} running={running} />
+                <Receipt receipt={receipt} />
+              </div>
+            </details>
+            <details className="evidence-detail">
+              <summary>
+                Market depth and sources <span>{OBSERVED_AT}</span>
+              </summary>
+              <div className="evidence-content">
+                <DepthChart />
+                <p className="honest">
+                  Our snapshot measured {RWA_DEBT} of stablecoin debt against
+                  RWA and yield tokens on Kamino. Quotes are observations, not
+                  executed trades or proof that every exit fails.
+                </p>
+              </div>
+            </details>
           </div>
         </section>
       </main>
 
       <footer className="story-footer">
         <span>Bidwall · committed exit liquidity for tokenized credit</span>
-        <span>Local replay of captured mainnet state · test funds</span>
+        <a
+          href="https://github.com/jaypopat/bidwall"
+          target="_blank"
+          rel="noreferrer"
+        >
+          Source and local reproduction ↗
+        </a>
       </footer>
     </div>
   );

@@ -36,10 +36,10 @@ float noise(vec2 p) {
 }
 float fbm(vec2 p) {
   float v = 0.0, a = 0.5;
-  for (int i = 0; i < 5; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
-  return v;
+  for (int i = 0; i < 3; i++) { v += a * noise(p); p *= 2.03; a *= 0.5; }
+  return v * (8.0 / 7.0);
 }
-float bayer2(vec2 a) { a = floor(a); return fract(dot(a, vec2(0.5, a.y * 0.75))); }
+float bayer2(vec2 a) { a = mod(floor(a), 2.0); return mod(2.0 * a.x + 3.0 * a.y, 4.0) / 4.0; }
 float bayer4(vec2 a) { return bayer2(0.5 * a) * 0.25 + bayer2(a); }
 float bayer8(vec2 a) { return bayer4(0.5 * a) * 0.25 + bayer2(a); }
 
@@ -47,7 +47,7 @@ void main() {
   vec2 uv = gl_FragCoord.xy / u_res;
   float aspect = u_res.x / u_res.y;
   vec2 p = vec2(uv.x * aspect, uv.y);
-  float t = u_time * 0.05;
+  float t = u_time * 0.035;
 
   vec2 warp = vec2(fbm(p * 1.6 + vec2(t, 0.0)), fbm(p * 1.6 + vec2(3.1, t)));
   float strands = fbm(vec2(p.x * 0.9 - t * 3.0, p.y * 11.0 + warp.x * 3.0));
@@ -62,12 +62,14 @@ void main() {
 
   float density = clamp(strands * depth + ripple, 0.0, 1.0);
   float cell = 2.0 * u_dpr;
-  float ink = step(bayer8(gl_FragCoord.xy / cell), smoothstep(0.28, 0.92, density));
+  float tone = smoothstep(0.28, 0.92, density);
+  float dots = smoothstep(-0.09, 0.09, tone - bayer8(gl_FragCoord.xy / cell));
+  float ink = mix(tone * 0.35, dots, 0.8);
 
   float glow = cliff * (1.0 - smoothstep(0.82, 1.05, edge)) * u_fracture;
   vec3 color = mix(u_ink, u_accent, clamp(glow * 1.6, 0.0, 1.0));
   float reach = mix(u_floor, 1.0, smoothstep(0.34, 0.78, uv.x));
-  gl_FragColor = vec4(mix(u_paper, color, ink * reach * 0.82), 1.0);
+  gl_FragColor = vec4(mix(u_paper, color, ink * reach * 0.68), 1.0);
 }
 `;
 
@@ -97,32 +99,56 @@ export function LiquidityField({
 }) {
   const canvas = useRef<HTMLCanvasElement>(null);
   const target = useRef(fracture);
+  const requestDraw = useRef<(() => void) | null>(null);
   const reduced = useReducedMotion();
   useEffect(() => {
     target.current = fracture;
+    requestDraw.current?.();
   }, [fracture]);
 
   useEffect(() => {
     const element = canvas.current;
     const gl = element?.getContext("webgl", {
       antialias: false,
+      alpha: false,
       premultipliedAlpha: false,
-      preserveDrawingBuffer: true,
+      powerPreference: "low-power",
     });
     if (!element || !gl) return;
     const compile = (type: number, source: string) => {
-      const shader = gl.createShader(type)!;
+      const shader = gl.createShader(type);
+      if (!shader) return null;
       gl.shaderSource(shader, source);
       gl.compileShader(shader);
+      if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
+        gl.deleteShader(shader);
+        return null;
+      }
       return shader;
     };
-    const program = gl.createProgram()!;
-    gl.attachShader(program, compile(gl.VERTEX_SHADER, VERTEX));
-    gl.attachShader(program, compile(gl.FRAGMENT_SHADER, FRAGMENT));
+    const vertex = compile(gl.VERTEX_SHADER, VERTEX);
+    const fragment = compile(gl.FRAGMENT_SHADER, FRAGMENT);
+    const program = gl.createProgram();
+    const buffer = gl.createBuffer();
+    const release = () => {
+      gl.deleteBuffer(buffer);
+      gl.deleteProgram(program);
+      gl.deleteShader(vertex);
+      gl.deleteShader(fragment);
+    };
+    if (!vertex || !fragment || !program || !buffer) {
+      release();
+      return;
+    }
+    gl.attachShader(program, vertex);
+    gl.attachShader(program, fragment);
     gl.linkProgram(program);
-    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) return;
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
+      release();
+      return;
+    }
     gl.useProgram(program);
-    gl.bindBuffer(gl.ARRAY_BUFFER, gl.createBuffer());
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
     gl.bufferData(
       gl.ARRAY_BUFFER,
       new Float32Array([-1, -1, 1, -1, -1, 1, 1, 1]),
@@ -131,58 +157,117 @@ export function LiquidityField({
     const position = gl.getAttribLocation(program, "a_pos");
     gl.enableVertexAttribArray(position);
     gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
-    const uniform = (name: string) => gl.getUniformLocation(program, name);
-    gl.uniform3fv(uniform("u_paper"), hex(paper));
-    gl.uniform3fv(uniform("u_ink"), hex(ink));
-    gl.uniform3fv(uniform("u_accent"), hex(accent));
-    gl.uniform1f(uniform("u_floor"), floor);
+    // Look up locations once, rather than across every animation frame.
+    const uniform = Object.fromEntries(
+      [
+        "res",
+        "time",
+        "dpr",
+        "mouse",
+        "fracture",
+        "floor",
+        "paper",
+        "ink",
+        "accent",
+      ].map((name) => [name, gl.getUniformLocation(program, `u_${name}`)])
+    );
+    gl.uniform3fv(uniform.paper, hex(paper));
+    gl.uniform3fv(uniform.ink, hex(ink));
+    gl.uniform3fv(uniform.accent, hex(accent));
+    gl.uniform1f(uniform.floor, floor);
 
-    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    const mouse = { x: 0.8, y: 0.5, tx: 0.8, ty: 0.5 };
+    let frame = 0;
+    let visible = true;
+    let previous = 0;
+    let elapsed = 0;
+    let current = target.current;
+    const schedule = () => {
+      if (!frame && visible && !document.hidden) {
+        frame = requestAnimationFrame(draw);
+      }
+    };
+    const pause = () => {
+      cancelAnimationFrame(frame);
+      frame = 0;
+      previous = 0;
+    };
+    const draw = (now: number) => {
+      frame = 0;
+      if (!visible || document.hidden || gl.isContextLost()) return;
+      const delta = previous ? Math.min((now - previous) / 1000, 0.05) : 1 / 60;
+      previous = now;
+      elapsed += delta;
+      current += (target.current - current) * (1 - Math.exp(-3 * delta));
+      const ease = 1 - Math.exp(-4 * delta);
+      mouse.x += (mouse.tx - mouse.x) * ease;
+      mouse.y += (mouse.ty - mouse.y) * ease;
+      gl.uniform1f(uniform.time, reduced ? 12 : elapsed);
+      gl.uniform1f(uniform.fracture, reduced ? target.current : current);
+      gl.uniform2f(uniform.mouse, mouse.x, mouse.y);
+      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+      if (!reduced) schedule();
+    };
+    requestDraw.current = schedule;
     const resize = () => {
-      element.width = Math.round(element.clientWidth * dpr);
-      element.height = Math.round(element.clientHeight * dpr);
+      const width = Math.max(1, element.clientWidth);
+      const height = Math.max(1, element.clientHeight);
+      // Ordered dots need CSS-pixel detail, not a full retina render buffer.
+      const scale = Math.min(
+        window.devicePixelRatio || 1,
+        1,
+        Math.sqrt(500_000 / (width * height))
+      );
+      element.width = Math.max(1, Math.round(width * scale));
+      element.height = Math.max(1, Math.round(height * scale));
       gl.viewport(0, 0, element.width, element.height);
-      gl.uniform2f(uniform("u_res"), element.width, element.height);
-      gl.uniform1f(uniform("u_dpr"), dpr);
+      gl.uniform2f(uniform.res, element.width, element.height);
+      gl.uniform1f(uniform.dpr, scale);
+      schedule();
     };
     resize();
     const sizer = new ResizeObserver(resize);
     sizer.observe(element);
 
-    const mouse = { x: 0.8, y: 0.5, tx: 0.8, ty: 0.5 };
+    const surface = element.parentElement;
     const onMove = (event: PointerEvent) => {
+      if (reduced || event.pointerType !== "mouse") return;
       const box = element.getBoundingClientRect();
-      mouse.tx = (event.clientX - box.left) / box.width;
-      mouse.ty = 1 - (event.clientY - box.top) / box.height;
+      mouse.tx = Math.max(
+        0,
+        Math.min(1, (event.clientX - box.left) / box.width)
+      );
+      mouse.ty = Math.max(
+        0,
+        Math.min(1, 1 - (event.clientY - box.top) / box.height)
+      );
     };
-    window.addEventListener("pointermove", onMove, { passive: true });
-
-    let frame = 0;
-    let visible = true;
+    const onLeave = () => {
+      mouse.tx = 0.8;
+      mouse.ty = 0.5;
+    };
+    surface?.addEventListener("pointermove", onMove, { passive: true });
+    surface?.addEventListener("pointerleave", onLeave);
     const watcher = new IntersectionObserver(([entry]) => {
       visible = entry.isIntersecting;
-      if (visible && !reduced) frame = requestAnimationFrame(draw);
+      if (visible) schedule();
+      else pause();
     });
     watcher.observe(element);
-
-    let current = target.current;
-    const began = performance.now();
-    const draw = (now: number) => {
-      current += (target.current - current) * 0.035;
-      mouse.x += (mouse.tx - mouse.x) * 0.06;
-      mouse.y += (mouse.ty - mouse.y) * 0.06;
-      gl.uniform1f(uniform("u_time"), reduced ? 12 : (now - began) / 1000);
-      gl.uniform1f(uniform("u_fracture"), reduced ? target.current : current);
-      gl.uniform2f(uniform("u_mouse"), mouse.x, mouse.y);
-      gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
-      if (visible && !reduced) frame = requestAnimationFrame(draw);
+    const onVisibility = () => {
+      if (document.hidden) pause();
+      else schedule();
     };
-    frame = requestAnimationFrame(draw);
+    document.addEventListener("visibilitychange", onVisibility);
     return () => {
-      cancelAnimationFrame(frame);
+      requestDraw.current = null;
+      pause();
       sizer.disconnect();
       watcher.disconnect();
-      window.removeEventListener("pointermove", onMove);
+      surface?.removeEventListener("pointermove", onMove);
+      surface?.removeEventListener("pointerleave", onLeave);
+      document.removeEventListener("visibilitychange", onVisibility);
+      release();
     };
   }, [paper, ink, accent, floor, reduced]);
 

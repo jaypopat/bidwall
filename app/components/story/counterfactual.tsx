@@ -28,9 +28,11 @@ const dollars = (value: number) =>
 export function Counterfactual({
   demo,
   receipt,
+  onWatch,
 }: {
   demo: DemoTerms;
   receipt: DemoReceipt;
+  onWatch: () => void;
 }) {
   const [index, setIndex] = useState(2);
   const [live, setLive] = useState<Record<number, ExitDepth | "loading">>({});
@@ -78,12 +80,7 @@ export function Counterfactual({
   return (
     <div className={`versus ${losesMoney ? "is-broken" : ""}`}>
       <div className="versus-head">
-        <div>
-          <span className="vis-label">
-            Illustration · ONyc collateral sale value
-          </span>
-          <p>Same liquidation margin. Different exit size.</p>
-        </div>
+        <span className="vis-label">ONyc sale size · illustration</span>
         <div
           className="size-switch"
           role="group"
@@ -102,35 +99,16 @@ export function Counterfactual({
       </div>
       <div className="versus-grid" aria-live="polite">
         <div className="versus-col without">
-          <span className="versus-tag">Exit through Jupiter</span>
-          <dl>
-            <div>
-              <dt>Collateral uplift in replay</dt>
-              <dd>{pct(model.collateralUpliftPct)}</dd>
-            </div>
-            <div>
-              <dt>
-                Quoted sale haircut
-                <small>
-                  {noRoute
-                    ? "live · no route"
-                    : liveQuote
-                      ? `live · ${new Date(liveQuote.observedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC · vs Jupiter spot`
-                      : `snapshot · ${OBSERVED_AT} · vs oracle`}
-                </small>
-              </dt>
-              <dd>{noRoute ? "No route" : pct(-lossPct)}</dd>
-            </div>
-          </dl>
+          <span className="versus-tag">Sell through Jupiter</span>
           <div className="versus-result">
-            <span className="vis-label">Proceeds over debt · before costs</span>
-            <strong>{noRoute ? "Unavailable" : pct(model.dexMarginPct)}</strong>
+            <span className="vis-label">Quote versus reference value</span>
+            <strong>{noRoute ? "No route" : pct(-lossPct)}</strong>
             <p>
               {noRoute
-                ? "Jupiter cannot quote this sale right now. Another route would be needed."
+                ? "Jupiter cannot quote this sale. Another exit is needed."
                 : losesMoney
-                  ? "This quoted route would not cover the debt under these assumptions. A liquidator would need another exit."
-                  : "This quoted route covers the debt under these assumptions, with a margin left before costs."}
+                  ? "Sale proceeds do not cover the modeled debt."
+                  : "Sale proceeds cover the modeled debt, before costs."}
             </p>
           </div>
           <button
@@ -143,67 +121,78 @@ export function Counterfactual({
               : `Check ${SALE_SIZES[index]} on Jupiter now`}{" "}
             <span aria-hidden>↗</span>
           </button>
+          <p className="quote-reference">
+            {noRoute
+              ? "Live · no route"
+              : liveQuote
+                ? `Live · ${new Date(liveQuote.observedAt).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit", timeZone: "UTC" })} UTC · Jupiter spot reference`
+                : `Snapshot · ${OBSERVED_AT} · oracle reference`}
+          </p>
           {observed &&
             observed !== "loading" &&
             observed.status === "error" && (
               <p className="versus-note" role="status">
-                Live quote unavailable. The dated snapshot remains shown.
+                Live quote unavailable. Showing the dated snapshot.
               </p>
             )}
         </div>
         <div className="versus-col with">
-          <span className="versus-tag">Exit through a committed bid</span>
-          <dl>
-            <div>
-              <dt>Illustrative bid price</dt>
-              <dd>{usd(demo.price, 2)} USDC / ONyc</dd>
-            </div>
-            <div>
-              <dt>
-                Escrow needed at this size
-                <small>Scaled funding · not the demo bid</small>
-              </dt>
-              <dd>{dollars(model.requiredEscrowUsdc)}</dd>
-            </div>
-          </dl>
+          <span className="versus-tag">A committed buyer</span>
           <div className="versus-result">
             <span className="vis-label">If this capacity is funded</span>
             <strong>
               {model.bidSurplusPct >= 0 ? "Debt covered" : "Price too low"}
             </strong>
-            <p>
-              At these terms, payment covers the liquidated debt with{" "}
-              {pct(model.bidSurplusPct)} surplus for the borrower. The provider
-              receives ONyc and takes its price and redemption risk.
-            </p>
           </div>
-          <a className="link-button" href="#liquidation">
-            See the actual $1,000 repayment <span aria-hidden>↓</span>
+          <dl>
+            <div>
+              <dt>Fixed bid price</dt>
+              <dd>{usd(demo.price, 2)} USDC / ONyc</dd>
+            </div>
+            <div>
+              <dt>Cash needed at this size</dt>
+              <dd>{dollars(model.requiredEscrowUsdc)}</dd>
+            </div>
+          </dl>
+          <a className="link-button" href="#liquidation" onClick={onWatch}>
+            See the actual repayment <span aria-hidden>↓</span>
           </a>
         </div>
       </div>
       <div className="versus-foot">
         <p>
-          The actual replay funds {usd(demoBudget(demo), 0)} USDC and repays
-          $1,000. No provider has committed the scaled amount shown here.
+          Illustrative funding. Actual replay: {usd(demoBudget(demo), 0)} USDC
+          committed, $1,000 of debt repaid.
         </p>
         <details>
-          <summary>How to read this comparison</summary>
+          <summary>Quote and model details</summary>
+          <dl className="comparison-assumptions">
+            <div>
+              <dt>Collateral uplift in the replay</dt>
+              <dd>{pct(model.collateralUpliftPct)}</dd>
+            </div>
+            <div>
+              <dt>Sale proceeds over debt, before costs</dt>
+              <dd>{noRoute ? "Unavailable" : pct(model.dexMarginPct)}</dd>
+            </div>
+            <div>
+              <dt>Borrower surplus at the bid terms</dt>
+              <dd>{pct(model.bidSurplusPct)}</dd>
+            </div>
+          </dl>
           <p>
-            The model holds the replay&apos;s {pct(model.collateralUpliftPct)}{" "}
-            collateral uplift constant and applies the observed sale haircut: (1
-            + uplift) × (1 − haircut) − 1. The bid side uses $0.94 against the
-            replay&apos;s $0.95 oracle value. These are illustrations, not large
-            liquidations we executed or a forecast of stress-market quotes.
+            The model holds the replay&apos;s collateral uplift constant: (1 +
+            uplift) × (1 − sale haircut) − 1. The bid uses $0.94 against the
+            replay&apos;s $0.95 oracle price. No large liquidation was executed,
+            and no outside provider has committed the scaled funding.
           </p>
           <p>
-            Jupiter is one route. Sales can be split over time, bonuses can
-            change, and{" "}
+            Jupiter is one route. Sales can be split, bonuses can change, and{" "}
             <a href={ONRE_ENGINE.url} target="_blank" rel="noreferrer">
-              OnRe offers issuer-backed quotes through Titan
+              OnRe quotes through Titan
             </a>
-            . A poor Jupiter quote does not establish bad debt across all
-            available exits.
+            . Poor Jupiter depth alone does not establish bad debt across all
+            exits.
           </p>
         </details>
       </div>

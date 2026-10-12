@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
 import type { DemoTerms } from "@/app/lib/bidwall/demo-terms";
 import { demoBudget } from "@/app/lib/bidwall/demo-terms";
 import type { DemoReceipt, DemoStage } from "@/app/lib/demo/types";
@@ -8,47 +7,40 @@ import { approx, tokens, usd } from "@/app/lib/story/format";
 import { CountUp, useReducedMotion } from "./motion";
 
 type Mode = DemoStage["mode"] | undefined;
-type Beat = {
-  id: DemoStage["id"];
-  kicker: string;
-  title: string;
-  body: string;
-};
+export type StoryBeat = "funded" | "stressed" | "settled" | "withdrawn";
+type Beat = { id: StoryBeat; label: string; title: string; body: string };
 
 function beats(
   demo: DemoTerms,
   settlement?: DemoReceipt["settlement"]
 ): Beat[] {
   const { symbol } = demo.pair;
-  const ltv = demo.loanLtv;
   return [
     {
       id: "funded",
-      kicker: "The bid",
-      title: "A fund commits before anything goes wrong.",
-      body: `The provider escrows ${usd(demoBudget(demo), 0)} USDC to buy up to ${tokens(demo.quantity, demo.pair.decimals)} ${symbol} at ${usd(demo.price, 2)} each. The loan it backs is a real ${symbol} loan captured from mainnet.`,
+      label: "Fund",
+      title: "Cash locked upfront.",
+      body: `The provider commits ${usd(demoBudget(demo), 0)} USDC at ${usd(demo.price, 2)} per ${symbol}. It cannot withdraw before expiry.`,
     },
     {
       id: "stressed",
-      kicker: "The shock",
-      title: "The price drops.",
-      body: `We lower the ${symbol} oracle price locally, from ${demo.healthyLabel} to ${demo.stressedLabel}${ltv ? `, pushing the loan past Kamino's ${ltv.liquidation}% line` : ""}. This is a test shock to captured state, with refreshed oracle timestamps and a local clock.`,
+      label: "Stress",
+      title: "The loan crosses the line.",
+      body: `Local test shock: ${symbol} moves from ${demo.healthyLabel} to ${demo.stressedLabel}${demo.loanLtv ? `, crossing Kamino's ${demo.loanLtv.liquidation}% liquidation line` : ", making the loan liquidatable"}.`,
     },
     {
       id: "settled",
-      kicker: "The settlement",
-      title: "One transaction. No DEX.",
-      body: settlement
-        ? `Kamino liquidates, and the bid buys the seized ${symbol} in the same transaction at ${usd(demo.price, 2)}. ${usd(settlement.repaidUsdcAtoms, 2)} USDC of debt is repaid and ${usd(settlement.borrowerUsdcAtoms, 2)} USDC of surplus returns to the borrower.`
-        : `Kamino liquidates, and the bid buys the seized ${symbol} in the same transaction: lender repaid, borrower paid the surplus, provider receives the collateral.`,
+      label: "Settle",
+      title: "Debt repaid. Collateral delivered.",
+      body: `The locked cash repays the lender. The provider receives ${symbol}, and any surplus returns to the borrower. Every leg settles together.`,
     },
     {
       id: "withdrawn",
-      kicker: "The expiry",
-      title: "What's unspent goes home.",
+      label: "Expiry",
+      title: "Unspent cash returns.",
       body: settlement
-        ? `After expiry, the remaining ${usd(settlement.remainingFunds, 2)} USDC returns to the provider.`
-        : "After expiry, the unspent escrow returns to the provider.",
+        ? `After expiry, ${usd(settlement.remainingFunds, 2)} USDC returns to the provider.`
+        : "After expiry, the provider withdraws the unspent funds.",
     },
   ];
 }
@@ -64,95 +56,70 @@ export function Liquidation({
   receipt,
   running,
   output,
+  view,
+  onViewChange,
 }: {
   demo: DemoTerms;
   receipt: DemoReceipt | null;
   running: boolean;
-  /** Runner output lines; the tail is shown while a run is live. */
   output: string[];
+  view: StoryBeat;
+  onViewChange: (view: StoryBeat) => void;
 }) {
-  const settlement = receipt?.settlement;
-  const list = beats(demo, settlement);
+  const list = beats(demo, receipt?.settlement);
   const modes = new Map(receipt?.stages.map((s) => [s.id, s.mode]));
-  const refs = useRef<(HTMLLIElement | null)[]>([]);
-  const [active, setActive] = useState(0);
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries)
-          if (entry.isIntersecting)
-            setActive(Number((entry.target as HTMLElement).dataset.index));
-      },
-      { rootMargin: "-48% 0px -48% 0px" }
-    );
-    refs.current.forEach((element) => element && observer.observe(element));
-    return () => observer.disconnect();
-  }, []);
-
-  // During a live run, follow the newest completed stage.
-  const done = receipt?.stages.length ?? 0;
-  useEffect(() => {
-    if (!running) return;
-    // Safety checks have their own section; follow the newest story stage.
-    const shown = receipt?.stages.filter((st) =>
-      list.some((b) => b.id === st.id)
-    );
-    const latest = shown?.at(-1)?.id;
-    const target = latest ? list.findIndex((b) => b.id === latest) : 0;
-    refs.current[Math.max(0, target)]?.scrollIntoView({
-      behavior: "smooth",
-      block: "center",
-    });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running, done]);
-
+  const latest = receipt?.stages
+    .filter((stage) => list.some((b) => b.id === stage.id))
+    .at(-1)?.id;
+  const activeId = running ? (latest ?? "funded") : view;
+  const active = Math.max(
+    0,
+    list.findIndex((b) => b.id === activeId)
+  );
   const beat = list[active];
-  const mode = modes.get(beat.id);
   return (
-    <div className="scrolly">
-      <ol className="scrolly-beats">
-        {list.map((item, index) => {
-          const itemMode = modes.get(item.id);
-          return (
-            <li
-              key={item.id}
-              id={`stage-${item.id}`}
-              ref={(element) => {
-                refs.current[index] = element;
-              }}
-              data-index={index}
-              className={`beat ${index === active ? "is-active" : ""}`}
-            >
-              <span className="beat-kicker">
-                {String(index + 1).padStart(2, "0")} · {item.kicker}
-              </span>
-              <h3>{item.title}</h3>
-              <p>{item.body}</p>
-              <StageChip mode={itemMode} running={running} />
-            </li>
-          );
-        })}
-      </ol>
-      <div className="scrolly-stage" aria-live="polite">
-        <div className="stage-frame">
-          <div className="stage-head">
-            <span>
-              {demo.pair.symbol} / USDC · {demo.market}
-            </span>
-            <StageChip mode={mode} running={running} />
-          </div>
-          <div className="stage-body" key={beat.id}>
-            <Visual beat={beat.id} demo={demo} receipt={receipt} />
-          </div>
-          {running && (
-            <ol className="stage-log" aria-label="Runner output">
-              {output.slice(-3).map((line, i) => (
-                <li key={`${i}-${line}`}>{line}</li>
-              ))}
-            </ol>
+    <div className="demo-walkthrough" id="stage-settled">
+      <div className="demo-steps" role="group" aria-label="Replay stages">
+        {list.map((item, i) => (
+          <button
+            key={item.id}
+            aria-pressed={item.id === beat.id}
+            aria-controls="demo-panel"
+            disabled={running}
+            onClick={() => onViewChange(item.id)}
+          >
+            <span>{String(i + 1).padStart(2, "0")}</span>
+            {item.label}
+          </button>
+        ))}
+      </div>
+      <div className="demo-panel" id="demo-panel" data-stage={beat.id}>
+        <div className="demo-copy" aria-live="polite" key={beat.id}>
+          <span className="beat-kicker">{beat.label}</span>
+          <h3>{beat.title}</h3>
+          <p>{beat.body}</p>
+          {beat.id === "settled" && (
+            <span className="demo-no-dex">One transaction · no DEX</span>
           )}
-          <Progress count={list.length} active={active} />
+        </div>
+        <div className="demo-stage">
+          <div className="stage-frame">
+            <div className="stage-head">
+              <span>{demo.pair.symbol} / USDC · Kamino</span>
+              <StageChip mode={modes.get(beat.id)} running={running} />
+            </div>
+            <div className="stage-body" key={beat.id}>
+              <Visual beat={beat.id} demo={demo} receipt={receipt} />
+            </div>
+            {running && (
+              <ol className="stage-log" aria-label="Runner output">
+                {output.slice(-3).map((line, i) => (
+                  <li key={`${i}-${line}`}>{line}</li>
+                ))}
+              </ol>
+            )}
+            <Progress count={list.length} active={active} />
+          </div>
         </div>
       </div>
     </div>
@@ -401,7 +368,11 @@ function MoneyFlow({
           </div>
         </dl>
       </div>
-      <svg viewBox="0 0 620 360" role="img" aria-label="Settlement money flow">
+      <svg
+        viewBox="0 0 620 360"
+        role="img"
+        aria-label={`Settlement: ${usd(settlement?.paidUsdcAtoms, 2)} USDC from escrow; ${usd(settlement?.repaidUsdcAtoms, 2)} USDC repays debt; ${usd(settlement?.borrowerUsdcAtoms, 2)} USDC returns to the borrower; ${tokens(settlement?.deliveredCollateralAtoms, decimals, 2)} ${symbol} goes to the provider.`}
+      >
         <defs>
           {flows.map((f) => (
             <path key={f.id} id={`flow-${f.id}`} d={f.d} />

@@ -54,13 +54,13 @@ export function DemoNotice({ hosted }: { hosted: boolean }) {
         <span className="kicker">Local execution · test funds</span>
         <h2 id="demo-notice-title">A recorded run you can reproduce.</h2>
         <p id="demo-notice-description">
-          This site shows a verified local replay of captured Solana mainnet
-          state, using Kamino&apos;s actual program and test funds. To execute
-          the scenario yourself, run it locally.
+          A recorded local execution using captured Solana mainnet state,
+          Kamino&apos;s actual program and test funds. Run it locally to execute
+          a fresh scenario.
         </p>
         <p className="notice-limit">
-          Bidwall contracts are not deployed to a public network. The live
-          Jupiter quote button only requests prices.
+          Bidwall is not deployed to a public network. Jupiter quotes are
+          read-only.
         </p>
         <details className="notice-setup">
           <summary>Run it yourself</summary>
