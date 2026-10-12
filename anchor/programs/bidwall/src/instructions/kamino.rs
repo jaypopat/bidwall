@@ -1,5 +1,7 @@
-//! Narrow adapter for the public xStocks NVDAx/USDC reserve pair. All amounts are
-//! raw token atoms, including NVDAx's scaled-UI mint. No UI multiplier is applied.
+//! Narrow adapter for a fixed table of Kamino collateral/USDC reserve pairs. All
+//! amounts are raw token atoms, including NVDAx's scaled-UI mint. No UI multiplier
+//! is applied. Each pair has one collateral reserve without a farm and one USDC
+//! debt reserve with a debt farm; anything else fails closed.
 use crate::{consideration, transfer::pay, Bid, BidState, ErrorCode, Market, Settlement};
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
@@ -8,17 +10,60 @@ use anchor_lang::solana_program::{
 };
 use anchor_spl::{
     token::{self, Mint, Token, TokenAccount},
-    token_2022::Token2022,
-    token_interface,
+    token_2022,
+    token_interface::{self, TokenInterface},
 };
 
 pub const KLEND: Pubkey = pubkey!("KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD");
-pub const LENDING_MARKET: Pubkey = pubkey!("5wJeMrUYECGq41fxRESKALVcHnNX26TAWy4W98yULsua");
-pub const NVDA_RESERVE: Pubkey = pubkey!("7B66Az3tJhAo4bLkX8PzTixQ9ZGyHkkjxfVLhF26sP5q");
-pub const USDC_RESERVE: Pubkey = pubkey!("97zoywd8mPZsGTg8q1wdD2Wgkdrs2tqusp1Qqcxbyj7E");
-pub const NVDA_MINT: Pubkey = pubkey!("Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh");
 pub const USDC_MINT: Pubkey = pubkey!("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
 pub const FARMS: Pubkey = pubkey!("FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr");
+
+/// One supported lending market and its collateral/USDC reserve pair.
+pub struct Pair {
+    pub lending_market: Pubkey,
+    pub collateral_reserve: Pubkey,
+    pub usdc_reserve: Pubkey,
+    pub collateral_mint: Pubkey,
+    pub collateral_token_program: Pubkey,
+    pub decimals: u8,
+}
+
+impl Pair {
+    /// Bid prices are USDC atoms per whole collateral token (10^decimals atoms).
+    pub fn scale(&self) -> u64 {
+        10u64.pow(self.decimals as u32)
+    }
+}
+
+/// Public xStocks market: NVDAx (Token-2022, scaled UI) against USDC.
+pub const NVDAX_USDC: Pair = Pair {
+    lending_market: pubkey!("5wJeMrUYECGq41fxRESKALVcHnNX26TAWy4W98yULsua"),
+    collateral_reserve: pubkey!("7B66Az3tJhAo4bLkX8PzTixQ9ZGyHkkjxfVLhF26sP5q"),
+    usdc_reserve: pubkey!("97zoywd8mPZsGTg8q1wdD2Wgkdrs2tqusp1Qqcxbyj7E"),
+    collateral_mint: pubkey!("Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh"),
+    collateral_token_program: token_2022::ID,
+    decimals: 8,
+};
+
+/// OnRe market: ONyc tokenized reinsurance (classic SPL) against its main USDC reserve.
+pub const ONYC_USDC: Pair = Pair {
+    lending_market: pubkey!("47tfyEG9SsdEnUm9cw5kY9BXngQGqu3LBoop9j5uTAv8"),
+    collateral_reserve: pubkey!("6ZxkBSJEqsXA3Kdm2PDAzHLUdPTPUK93Lf4bAezec1UQ"),
+    usdc_reserve: pubkey!("AYL4LMc4ZCVyq3Z7XPJGWDM4H9PiWjqXAAuuHBEGVR2Z"),
+    collateral_mint: pubkey!("5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5"),
+    collateral_token_program: token::ID,
+    decimals: 9,
+};
+
+pub const PAIRS: [&Pair; 2] = [&NVDAX_USDC, &ONYC_USDC];
+
+pub fn pair_for(collateral_mint: &Pubkey) -> Result<&'static Pair> {
+    PAIRS
+        .iter()
+        .find(|p| p.collateral_mint == *collateral_mint)
+        .copied()
+        .ok_or_else(|| error!(ErrorCode::Terms))
+}
 pub struct Kamino;
 impl Id for Kamino {
     fn id() -> Pubkey {
@@ -27,18 +72,21 @@ impl Id for Kamino {
 }
 
 pub fn register(ctx: Context<CreateKaminoMarket>, keeper: Pubkey) -> Result<()> {
+    let pair = pair_for(&ctx.accounts.collateral_mint.key())?;
     require!(
-        ctx.accounts.usdc_mint.decimals == 6 && ctx.accounts.collateral_mint.decimals == 8,
+        ctx.accounts.usdc_mint.decimals == 6
+            && ctx.accounts.collateral_mint.decimals == pair.decimals
+            && ctx.accounts.collateral_token_program.key() == pair.collateral_token_program,
         ErrorCode::Terms
     );
     ctx.accounts.market.set_inner(Market {
         authority: ctx.accounts.authority.key(),
         keeper,
         lender_program: KLEND,
-        lender_market: LENDING_MARKET,
-        collateral_mint: NVDA_MINT,
+        lender_market: pair.lending_market,
+        collateral_mint: pair.collateral_mint,
         usdc_mint: USDC_MINT,
-        scale: 100_000_000,
+        scale: pair.scale(),
     });
     Ok(())
 }
@@ -54,6 +102,12 @@ pub fn execute<'info>(
     expected_deposited_ctokens: u64,
 ) -> Result<()> {
     let a = &mut *ctx.accounts;
+    let pair = pair_for(&a.collateral_mint.key())?;
+    require!(
+        a.market.lender_market == pair.lending_market
+            && a.collateral_token_program.key() == pair.collateral_token_program,
+        ErrorCode::Terms
+    );
     let now = Clock::get()?.unix_timestamp;
     require!(a.bid.state == BidState::Active, ErrorCode::State);
     require!(now >= a.bid.start && now < a.bid.expiry, ErrorCode::Window);
@@ -65,7 +119,7 @@ pub fn execute<'info>(
         max_repay > 0 && min_collateral > 0 && max_repay <= a.bid.remaining_funds,
         ErrorCode::Capacity
     );
-    let before_position = validate(a, ctx.remaining_accounts)?;
+    let before_position = validate(a, pair, ctx.remaining_accounts)?;
     require!(
         before_position.collateral == expected_deposited_ctokens && before_position.debt > 0,
         ErrorCode::Replay
@@ -132,7 +186,7 @@ pub fn execute<'info>(
         .amount
         .checked_sub(before.2)
         .ok_or(ErrorCode::LenderMismatch)?;
-    let after_position = position(&ctx.remaining_accounts[1])?;
+    let after_position = position(pair, &ctx.remaining_accounts[1])?;
     require!(
         spent > 0
             && spent <= max_repay
@@ -158,8 +212,8 @@ pub fn execute<'info>(
         ErrorCode::LenderMismatch
     );
     let filled = a.bid.quantity - a.bid.remaining_quantity;
-    let proceeds = consideration(filled + received, a.bid.price, 100_000_000)?
-        - consideration(filled, a.bid.price, 100_000_000)?;
+    let proceeds = consideration(filled + received, a.bid.price, pair.scale())?
+        - consideration(filled, a.bid.price, pair.scale())?;
     require!(
         proceeds >= spent && proceeds <= a.bid.remaining_funds,
         ErrorCode::Capacity
@@ -193,7 +247,7 @@ pub fn execute<'info>(
             &[seeds],
         ),
         received,
-        8,
+        pair.decimals,
     )?;
     a.escrow.reload()?;
     a.source_usdc.reload()?;
@@ -215,7 +269,7 @@ pub fn execute<'info>(
     }
     emit!(Settlement {
         bid: bid_key,
-        lender_market: LENDING_MARKET,
+        lender_market: pair.lending_market,
         position: ctx.remaining_accounts[1].key(),
         quantity: received,
         proceeds,
@@ -255,18 +309,19 @@ fn check(info: &AccountInfo, size: usize, discriminator: &[u8]) -> Result<()> {
     );
     Ok(())
 }
-fn position(info: &AccountInfo) -> Result<Position> {
+fn position(pair: &Pair, info: &AccountInfo) -> Result<Position> {
     check(info, 3344, &[168, 206, 141, 106, 88, 76, 172, 167])?;
     let d = info.try_borrow_data()?;
-    require_keys_eq!(key(&d, 32)?, LENDING_MARKET, ErrorCode::Terms);
+    require_keys_eq!(key(&d, 32)?, pair.lending_market, ErrorCode::Terms);
     let collateral = u64::from_le_bytes(number(&d, 128)?);
     let debt = u128::from_le_bytes(number(&d, 1296)?);
     require!(
-        key(&d, 96)? == NVDA_RESERVE || (key(&d, 96)? == Pubkey::default() && collateral == 0),
+        key(&d, 96)? == pair.collateral_reserve
+            || (key(&d, 96)? == Pubkey::default() && collateral == 0),
         ErrorCode::Terms
     );
     require!(
-        key(&d, 1208)? == USDC_RESERVE || (key(&d, 1208)? == Pubkey::default() && debt == 0),
+        key(&d, 1208)? == pair.usdc_reserve || (key(&d, 1208)? == Pubkey::default() && debt == 0),
         ErrorCode::Terms
     );
     for i in 1..8 {
@@ -285,7 +340,7 @@ fn position(info: &AccountInfo) -> Result<Position> {
         debt: u128::from_le_bytes(number(&d, 1296)?),
     })
 }
-fn validate(a: &SettleKamino, r: &[AccountInfo]) -> Result<Position> {
+fn validate(a: &SettleKamino, pair: &Pair, r: &[AccountInfo]) -> Result<Position> {
     require!(r.len() == 26, ErrorCode::Terms);
     check(&r[2], 4664, &[246, 114, 50, 98, 72, 157, 28, 120])?;
     for index in [4, 7] {
@@ -293,25 +348,25 @@ fn validate(a: &SettleKamino, r: &[AccountInfo]) -> Result<Position> {
     }
     let u = r[4].try_borrow_data()?;
     let n = r[7].try_borrow_data()?;
-    require_keys_eq!(key(&u, 32)?, LENDING_MARKET, ErrorCode::Terms);
-    require_keys_eq!(key(&n, 32)?, LENDING_MARKET, ErrorCode::Terms);
+    require_keys_eq!(key(&u, 32)?, pair.lending_market, ErrorCode::Terms);
+    require_keys_eq!(key(&n, 32)?, pair.lending_market, ErrorCode::Terms);
     require_keys_eq!(key(&u, 128)?, USDC_MINT, ErrorCode::Terms);
-    require_keys_eq!(key(&n, 128)?, NVDA_MINT, ErrorCode::Terms);
-    require_keys_eq!(key(&n, 64)?, Pubkey::default(), ErrorCode::Terms); // this pair has no collateral farm
+    require_keys_eq!(key(&n, 128)?, pair.collateral_mint, ErrorCode::Terms);
+    require_keys_eq!(key(&n, 64)?, Pubkey::default(), ErrorCode::Terms); // supported pairs have no collateral farm
     let debt_farm = key(&u, 96)?;
     let farm_user =
         Pubkey::find_program_address(&[b"user", debt_farm.as_ref(), r[1].key.as_ref()], &FARMS).0;
-    let authority = Pubkey::find_program_address(&[b"lma", LENDING_MARKET.as_ref()], &KLEND).0;
+    let authority = Pubkey::find_program_address(&[b"lma", pair.lending_market.as_ref()], &KLEND).0;
     let expected = [
         a.liquidator.key(),
         r[1].key(),
-        LENDING_MARKET,
+        pair.lending_market,
         authority,
-        USDC_RESERVE,
+        pair.usdc_reserve,
         USDC_MINT,
         key(&u, 160)?,
-        NVDA_RESERVE,
-        NVDA_MINT,
+        pair.collateral_reserve,
+        pair.collateral_mint,
         key(&n, 2560)?,
         key(&n, 2600)?,
         key(&n, 160)?,
@@ -321,21 +376,21 @@ fn validate(a: &SettleKamino, r: &[AccountInfo]) -> Result<Position> {
         a.destination_collateral.key(),
         token::ID,
         token::ID,
-        anchor_spl::token_2022::ID,
+        pair.collateral_token_program,
         pubkey!("Sysvar1nstructions1111111111111111111111111"),
         KLEND,
         KLEND,
         farm_user,
         debt_farm,
         FARMS,
-        NVDA_RESERVE,
+        pair.collateral_reserve,
     ];
     for (actual, expected) in r.iter().zip(expected) {
         require_keys_eq!(actual.key(), expected, ErrorCode::Terms);
     }
     require_keys_eq!(a.repay_supply.key(), r[6].key(), ErrorCode::Terms);
     require_keys_eq!(a.destination_ctoken.mint, r[9].key(), ErrorCode::Terms);
-    let p = position(&r[1])?;
+    let p = position(pair, &r[1])?;
     require_keys_eq!(a.borrower_usdc.owner, p.owner, ErrorCode::Terms);
     // No aliases between payment recipients or between delivered and intermediate collateral.
     let payment = [
@@ -365,15 +420,16 @@ pub struct CreateKaminoMarket<'info> {
     pub market: Account<'info, Market>,
     #[account(address=USDC_MINT)]
     pub usdc_mint: Box<Account<'info, Mint>>,
-    #[account(address=NVDA_MINT, mint::token_program=collateral_token_program)]
+    /// Must be a supported pair's mint; `register` checks it against the table.
+    #[account(mint::token_program=collateral_token_program)]
     pub collateral_mint: Box<InterfaceAccount<'info, token_interface::Mint>>,
-    pub collateral_token_program: Program<'info, Token2022>,
+    pub collateral_token_program: Interface<'info, TokenInterface>,
     pub system_program: Program<'info, System>,
 }
 #[derive(Accounts)]
 pub struct SettleKamino<'info> {
     pub keeper: Signer<'info>,
-    #[account(has_one=keeper,has_one=usdc_mint,has_one=collateral_mint, constraint=market.lender_program==KLEND && market.lender_market==LENDING_MARKET)]
+    #[account(has_one=keeper,has_one=usdc_mint,has_one=collateral_mint, constraint=market.lender_program==KLEND)]
     pub market: Box<Account<'info, Market>>,
     #[account(mut,has_one=market,seeds=[b"bid",bid.provider.as_ref(),&bid.id.to_le_bytes()],bump=bid.bump,constraint=bid.adapter==KLEND)]
     pub bid: Box<Account<'info, Bid>>,
@@ -384,7 +440,7 @@ pub struct SettleKamino<'info> {
     pub liquidator: UncheckedAccount<'info>,
     #[account(address=USDC_MINT)]
     pub usdc_mint: Box<Account<'info, Mint>>,
-    #[account(address=NVDA_MINT,mint::token_program=collateral_token_program)]
+    #[account(mint::token_program=collateral_token_program)]
     pub collateral_mint: Box<InterfaceAccount<'info, token_interface::Mint>>,
     #[account(mut,token::mint=usdc_mint,token::authority=liquidator)]
     pub source_usdc: Box<Account<'info, TokenAccount>>,
@@ -400,5 +456,5 @@ pub struct SettleKamino<'info> {
     pub repay_supply: Box<Account<'info, TokenAccount>>,
     pub lender_program: Program<'info, Kamino>,
     pub token_program: Program<'info, Token>,
-    pub collateral_token_program: Program<'info, Token2022>,
+    pub collateral_token_program: Interface<'info, TokenInterface>,
 }

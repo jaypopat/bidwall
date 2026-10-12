@@ -195,6 +195,8 @@ export async function prepareSettlement(input: {
     market: bid.market,
     borrowerUsdc,
     repaySupply: KAMINO.repaySupply,
+    collateralMint: KAMINO.collateralMint,
+    collateralTokenProgram: KAMINO.collateralTokenProgram,
     maxRepay,
     minCollateral,
     expectedRemaining: bid.remainingQuantity,

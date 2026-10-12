@@ -50,10 +50,8 @@ export type CreateKaminoMarketInstruction<
   TAccountMarket extends string | AccountMeta<string> = string,
   TAccountUsdcMint extends string | AccountMeta<string> =
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  TAccountCollateralMint extends string | AccountMeta<string> =
-    "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
-  TAccountCollateralTokenProgram extends string | AccountMeta<string> =
-    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  TAccountCollateralMint extends string | AccountMeta<string> = string,
+  TAccountCollateralTokenProgram extends string | AccountMeta<string> = string,
   TAccountSystemProgram extends string | AccountMeta<string> =
     "11111111111111111111111111111111",
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
@@ -133,8 +131,9 @@ export type CreateKaminoMarketInput<
   authority: TransactionSigner<TAccountAuthority>;
   market: TransactionSigner<TAccountMarket>;
   usdcMint?: Address<TAccountUsdcMint>;
-  collateralMint?: Address<TAccountCollateralMint>;
-  collateralTokenProgram?: Address<TAccountCollateralTokenProgram>;
+  /** Must be a supported pair's mint; `register` checks it against the table. */
+  collateralMint: Address<TAccountCollateralMint>;
+  collateralTokenProgram: Address<TAccountCollateralTokenProgram>;
   systemProgram?: Address<TAccountSystemProgram>;
   keeper: CreateKaminoMarketInstructionDataArgs["keeper"];
 };
@@ -194,14 +193,6 @@ export function getCreateKaminoMarketInstruction<
     accounts.usdcMint.value =
       "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address<"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">;
   }
-  if (!accounts.collateralMint.value) {
-    accounts.collateralMint.value =
-      "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh" as Address<"Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh">;
-  }
-  if (!accounts.collateralTokenProgram.value) {
-    accounts.collateralTokenProgram.value =
-      "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
-  }
   if (!accounts.systemProgram.value) {
     accounts.systemProgram.value =
       "11111111111111111111111111111111" as Address<"11111111111111111111111111111111">;
@@ -241,6 +232,7 @@ export type ParsedCreateKaminoMarketInstruction<
     authority: TAccountMetas[0];
     market: TAccountMetas[1];
     usdcMint: TAccountMetas[2];
+    /** Must be a supported pair's mint; `register` checks it against the table. */
     collateralMint: TAccountMetas[3];
     collateralTokenProgram: TAccountMetas[4];
     systemProgram: TAccountMetas[5];

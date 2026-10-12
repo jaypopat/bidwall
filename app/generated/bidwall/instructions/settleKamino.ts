@@ -59,8 +59,7 @@ export type SettleKaminoInstruction<
   TAccountLiquidator extends string | AccountMeta<string> = string,
   TAccountUsdcMint extends string | AccountMeta<string> =
     "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
-  TAccountCollateralMint extends string | AccountMeta<string> =
-    "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+  TAccountCollateralMint extends string | AccountMeta<string> = string,
   TAccountSourceUsdc extends string | AccountMeta<string> = string,
   TAccountDestinationCtoken extends string | AccountMeta<string> = string,
   TAccountDestinationCollateral extends string | AccountMeta<string> = string,
@@ -71,8 +70,7 @@ export type SettleKaminoInstruction<
     "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
   TAccountTokenProgram extends string | AccountMeta<string> =
     "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
-  TAccountCollateralTokenProgram extends string | AccountMeta<string> =
-    "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb",
+  TAccountCollateralTokenProgram extends string | AccountMeta<string> = string,
   TRemainingAccounts extends readonly AccountMeta<string>[] = [],
 > = Instruction<TProgram> &
   InstructionWithData<ReadonlyUint8Array> &
@@ -201,7 +199,7 @@ export type SettleKaminoAsyncInput<
   escrow?: Address<TAccountEscrow>;
   liquidator?: Address<TAccountLiquidator>;
   usdcMint?: Address<TAccountUsdcMint>;
-  collateralMint?: Address<TAccountCollateralMint>;
+  collateralMint: Address<TAccountCollateralMint>;
   sourceUsdc: Address<TAccountSourceUsdc>;
   destinationCtoken: Address<TAccountDestinationCtoken>;
   destinationCollateral: Address<TAccountDestinationCollateral>;
@@ -210,7 +208,7 @@ export type SettleKaminoAsyncInput<
   repaySupply: Address<TAccountRepaySupply>;
   lenderProgram?: Address<TAccountLenderProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
-  collateralTokenProgram?: Address<TAccountCollateralTokenProgram>;
+  collateralTokenProgram: Address<TAccountCollateralTokenProgram>;
   maxRepay: SettleKaminoInstructionDataArgs["maxRepay"];
   minCollateral: SettleKaminoInstructionDataArgs["minCollateral"];
   expectedRemaining: SettleKaminoInstructionDataArgs["expectedRemaining"];
@@ -333,10 +331,6 @@ export async function getSettleKaminoInstructionAsync<
     accounts.usdcMint.value =
       "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address<"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">;
   }
-  if (!accounts.collateralMint.value) {
-    accounts.collateralMint.value =
-      "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh" as Address<"Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh">;
-  }
   if (!accounts.lenderProgram.value) {
     accounts.lenderProgram.value =
       "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD" as Address<"KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD">;
@@ -344,10 +338,6 @@ export async function getSettleKaminoInstructionAsync<
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
-  }
-  if (!accounts.collateralTokenProgram.value) {
-    accounts.collateralTokenProgram.value =
-      "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
@@ -419,7 +409,7 @@ export type SettleKaminoInput<
   escrow: Address<TAccountEscrow>;
   liquidator: Address<TAccountLiquidator>;
   usdcMint?: Address<TAccountUsdcMint>;
-  collateralMint?: Address<TAccountCollateralMint>;
+  collateralMint: Address<TAccountCollateralMint>;
   sourceUsdc: Address<TAccountSourceUsdc>;
   destinationCtoken: Address<TAccountDestinationCtoken>;
   destinationCollateral: Address<TAccountDestinationCollateral>;
@@ -428,7 +418,7 @@ export type SettleKaminoInput<
   repaySupply: Address<TAccountRepaySupply>;
   lenderProgram?: Address<TAccountLenderProgram>;
   tokenProgram?: Address<TAccountTokenProgram>;
-  collateralTokenProgram?: Address<TAccountCollateralTokenProgram>;
+  collateralTokenProgram: Address<TAccountCollateralTokenProgram>;
   maxRepay: SettleKaminoInstructionDataArgs["maxRepay"];
   minCollateral: SettleKaminoInstructionDataArgs["minCollateral"];
   expectedRemaining: SettleKaminoInstructionDataArgs["expectedRemaining"];
@@ -539,10 +529,6 @@ export function getSettleKaminoInstruction<
     accounts.usdcMint.value =
       "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v" as Address<"EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v">;
   }
-  if (!accounts.collateralMint.value) {
-    accounts.collateralMint.value =
-      "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh" as Address<"Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh">;
-  }
   if (!accounts.lenderProgram.value) {
     accounts.lenderProgram.value =
       "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD" as Address<"KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD">;
@@ -550,10 +536,6 @@ export function getSettleKaminoInstruction<
   if (!accounts.tokenProgram.value) {
     accounts.tokenProgram.value =
       "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA" as Address<"TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA">;
-  }
-  if (!accounts.collateralTokenProgram.value) {
-    accounts.collateralTokenProgram.value =
-      "TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb" as Address<"TokenzQdBNbLqP5VEhdkAS6EPFLC1PHnBqCXEpPxuEb">;
   }
 
   const getAccountMeta = getAccountMetaFactory(programAddress, "programId");
