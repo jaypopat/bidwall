@@ -14,6 +14,12 @@ Bidwall program, rebind the market keeper to an ephemeral signer, and execute th
 recorded refresh + settlement instructions against the captured lender binaries.
 They never require RPC access or update the fixture automatically.
 
+`kamino-onyc.json.gz` (with `manifest-onyc.json`) is the same kind of replay for
+OnRe's ONyc/USDC reserve pair, captured on 2026-10-12 at upstream slot 456189999.
+It liquidates a real looped ONyc loan (66% LTV, threshold 75%) after the fork's
+Scope ONyc price and TWAP are set to 0.95, the reserve's lowest accepted price.
+It contains Kamino Lending and Farms binaries only; ONyc is classic SPL Token.
+
 Generate deliberately after reviewing a fresh fork run:
 
 ```sh
@@ -21,7 +27,8 @@ npm run anchor-build
 npm ci --prefix spikes/kamino-cpi
 NO_DNA=1 surfpool start --port 18899 --ws-port 18900 --no-deploy --no-tui --airdrop-amount 0
 # In another terminal, from the repository root:
-CAPTURE_FIXTURE=1 node spikes/kamino-cpi/scenario.mjs
+CAPTURE_FIXTURE=1 node spikes/kamino-cpi/scenario.mjs            # NVDAx
+PAIR=onyc CAPTURE_FIXTURE=1 node spikes/kamino-cpi/scenario.mjs  # ONyc
 ```
 
 Run offline: `npm run anchor-test`. Public live account discovery can change;

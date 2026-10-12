@@ -1,0 +1,18 @@
+{
+  "label": "Local mainnet fork (ONyc). Real Kamino binary and obligation; locally funded liquidator and stressed Scope price.",
+  "observedAt": "2026-10-12T21:11:20.803Z",
+  "coherentSnapshotSlot": 456189999,
+  "localSignature": "67AZZ6bBXQnXUcvDk1u2JcnduDTCpBqbi98z7KWUtdaquKTz53KWi1WvjEpLzmgfZmG6cXPZENxtAQmLHxGnWaub",
+  "fixtureSha256": "3cf5e1cd1f4ff17efb5bc5bfee5e49a63cd0fe0a88219d539f924b6b1bdaf10a",
+  "programElfSha256": {
+    "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD": "9db16dd4b7bbfe4f13df850bf880bfc4522fcece06717c0626d625746a3cc85b",
+    "FarmsPZpWu9i7Kky8tPN37rs2TpmMrAZrC7S7vJa91Hr": "67c4a989342024efedf6181c1d91cf6aac2bb2bcd17f43b8848c9f3d8ba21011"
+  },
+  "unitsConsumed": 267037,
+  "rawDeltas": {
+    "collateralAtoms": 1078793553683,
+    "bidUsdcAtoms": 1078793553,
+    "debtUsdcAtoms": 1000000000,
+    "borrowerUsdcAtoms": 78793553
+  }
+}

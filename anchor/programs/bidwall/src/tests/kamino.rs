@@ -19,12 +19,19 @@ fn pk(s: &str) -> Pubkey {
 fn bytes(v: &Value) -> Vec<u8> {
     STANDARD.decode(v.as_str().unwrap()).unwrap()
 }
+const NVDAX_FIXTURE: &[u8] = include_bytes!("../../fixtures/kamino.json.gz");
+const ONYC_FIXTURE: &[u8] = include_bytes!("../../fixtures/kamino-onyc.json.gz");
+
 impl Fork {
     fn new() -> Self {
+        Self::load(NVDAX_FIXTURE)
+    }
+    fn onyc() -> Self {
+        Self::load(ONYC_FIXTURE)
+    }
+    fn load(fixture: &[u8]) -> Self {
         let mut json = String::new();
-        GzDecoder::new(&include_bytes!("../../fixtures/kamino.json.gz")[..])
-            .read_to_string(&mut json)
-            .unwrap();
+        GzDecoder::new(fixture).read_to_string(&mut json).unwrap();
         let v: Value = serde_json::from_str(&json).unwrap();
         let mut svm = LiteSVM::new();
         let mut tracked = Vec::new();
@@ -180,6 +187,42 @@ fn real_kamino_pays_debt_delivers_collateral_and_borrower_surplus() {
         u64::from_le_bytes(loan.data[128..136].try_into().unwrap()),
     );
     f.send().unwrap(); // A genuinely fresh partial-liquidation quote is allowed.
+}
+/// OnRe's ONyc reserve: classic SPL collateral, 9 decimals, a real looped loan at
+/// the 66% max LTV, liquidated after the fork's Scope NAV is stressed to 0.95.
+#[test]
+fn real_kamino_liquidates_onyc_into_a_fixed_price_bid() {
+    let mut f = Fork::onyc();
+    let before = f.bid();
+    let escrow = f.token(3);
+    let repay = f.token(12);
+    let provider = f.token(10);
+    let borrower = f.token(11);
+    f.send().unwrap();
+    let after = f.bid();
+    let delivered = f.token(10) - provider;
+    let spent = f.token(12) - repay;
+    assert!(spent > 0 && delivered > 0);
+    let proceeds = consideration(delivered, before.price, 1_000_000_000).unwrap();
+    assert!(proceeds > spent);
+    assert_eq!(escrow - f.token(3), proceeds);
+    assert_eq!(f.token(11) - borrower, proceeds - spent);
+    assert_eq!(
+        after.remaining_quantity,
+        before.remaining_quantity - delivered
+    );
+    assert_eq!(after.remaining_funds, before.remaining_funds - proceeds);
+    for index in [7, 8, 9] {
+        assert_eq!(f.token(index), 0);
+    }
+    f.rejects(6004); // The same quote cannot be replayed.
+}
+#[test]
+fn onyc_settlement_rejects_the_other_pairs_reserve() {
+    let mut f = Fork::onyc();
+    // Swap the collateral reserve for the USDC reserve: the pair table must reject it.
+    f.instructions.last_mut().unwrap().accounts[20].pubkey = f.key(23);
+    f.rejects(6000);
 }
 #[test]
 fn kamino_unauthorized_keeper() {

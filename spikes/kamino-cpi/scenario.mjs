@@ -26,7 +26,7 @@ const MARKET = PAIR.market,
   USDC = PAIR.usdcReserve;
 const OBLIGATION = PAIR.obligation;
 // NVDAx keeps its original evidence names; other pairs get their own files.
-const suffix = PAIR.captureFixture ? "" : `-${PAIR.label.toLowerCase()}`;
+const suffix = PAIR.fixture === "kamino" ? "" : `-${PAIR.label.toLowerCase()}`;
 const TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   ZERO = "11111111111111111111111111111111";
 const encode = kit.getAddressEncoder(),
@@ -533,16 +533,19 @@ console.log(
 );
 
 // Explicit opt-in refresh of the committed offline replay fixture.
-if (process.env.CAPTURE_FIXTURE === "1" && PAIR.captureFixture) {
+if (process.env.CAPTURE_FIXTURE === "1") {
   const signature = evidence.transactions.at(-1).signature;
   const snapshot = await rpc("surfnet_exportSnapshot", [
     { scope: { preTransaction: signature } },
   ]);
   const programs = {};
+  // Classic SPL Token is built into the offline runtime; capture only deployed upgradeables.
   for (const key of [
     KLEND,
     FARMS_PROGRAM_ADDRESS,
-    reserveC.liquidity.tokenProgram,
+    ...(reserveC.liquidity.tokenProgram === TOKEN
+      ? []
+      : [reserveC.liquidity.tokenProgram]),
   ]) {
     const p = await account(key);
     assert(p.executable);
@@ -578,9 +581,14 @@ if (process.env.CAPTURE_FIXTURE === "1" && PAIR.captureFixture) {
   mkdirSync(directory, { recursive: true });
   const fixtureBytes = gzipSync(JSON.stringify(fixture));
   const manifest = fixtureManifest(fixtureBytes);
-  writeFileSync(new URL("kamino.json.gz", directory), fixtureBytes);
+  writeFileSync(new URL(`${PAIR.fixture}.json.gz`, directory), fixtureBytes);
   writeFileSync(
-    new URL("manifest.json", directory),
+    new URL(
+      PAIR.fixture === "kamino"
+        ? "manifest.json"
+        : `manifest-${PAIR.label.toLowerCase()}.json`,
+      directory
+    ),
     JSON.stringify(manifest, null, 2) + "\n"
   );
 }

@@ -18,7 +18,7 @@ export const PAIRS = {
     stressLabel: "NVDA 150",
     quantity: 1_000_000_000n, // 10 NVDAx in raw atoms
     price: 150_000_000n, // 150 USDC per 10^8 atoms
-    captureFixture: true,
+    fixture: "kamino",
   },
   onyc: {
     label: "ONyc",
@@ -36,7 +36,7 @@ export const PAIRS = {
     stressLabel: "ONyc NAV 0.95",
     quantity: 5_000_000_000_000n, // 5,000 ONyc in raw atoms
     price: 1_000_000n, // 1.00 USDC per whole ONyc: a redemption-backed standing bid
-    captureFixture: false,
+    fixture: "kamino-onyc",
   },
 };
 
