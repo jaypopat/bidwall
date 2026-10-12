@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Counterfactual } from "./components/story/counterfactual";
 import { DepthChart } from "./components/story/depth-chart";
+import { DemoNotice } from "./components/story/demo-notice";
 import { Liquidation } from "./components/story/liquidation";
 import { LiquidityField } from "./components/story/liquidity-field";
 import { CountUp, Reveal } from "./components/story/motion";
@@ -46,13 +47,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
+    if (data?.enabled === false) return;
     const initial = window.setTimeout(() => void refresh(), 0);
     const timer = window.setInterval(() => void refresh(), 2000);
     return () => {
       window.clearTimeout(initial);
       window.clearInterval(timer);
     };
-  }, [refresh]);
+  }, [refresh, data?.enabled]);
 
   const live = data?.receipt ?? null;
   // Without a local runtime (or before the first run) show the recorded run.
@@ -121,6 +123,7 @@ export default function Home() {
             </a>
           ))}
         </nav>
+        <DemoNotice hosted={data?.enabled === false} />
         <span
           className={`status-pill ${running ? "running" : (receipt?.status ?? "")}`}
           role="status"
@@ -227,37 +230,45 @@ export default function Home() {
                 expiry.
               </Reveal>
               <div className="controls">
-                <div
-                  className="pair-switch"
-                  role="radiogroup"
-                  aria-label="Pair"
-                >
-                  {Object.values(DEMO_TERMS).map(({ pair }) => (
-                    <button
-                      key={pair.id}
-                      role="radio"
-                      aria-checked={selectedPair === pair.id}
-                      disabled={running}
-                      onClick={() => setNextPair(pair.id)}
-                    >
-                      {pair.symbol} / USDC
-                    </button>
-                  ))}
-                </div>
-                <button
-                  className="btn-primary"
-                  disabled={loading || !data?.enabled || running}
-                  onClick={() => void run()}
-                >
-                  {running
-                    ? "Running…"
-                    : `Run ${DEMO_TERMS[selectedPair].pair.symbol} scenario`}
-                  <span aria-hidden>→</span>
-                </button>
+                {data?.enabled && (
+                  <div
+                    className="pair-switch"
+                    role="radiogroup"
+                    aria-label="Pair"
+                  >
+                    {Object.values(DEMO_TERMS).map(({ pair }) => (
+                      <button
+                        key={pair.id}
+                        role="radio"
+                        aria-checked={selectedPair === pair.id}
+                        disabled={running}
+                        onClick={() => setNextPair(pair.id)}
+                      >
+                        {pair.symbol} / USDC
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {data?.enabled === false ? (
+                  <a className="btn-primary" href="#stage-settled">
+                    Watch verified settlement <span aria-hidden>→</span>
+                  </a>
+                ) : (
+                  <button
+                    className="btn-primary"
+                    disabled={loading || !data?.enabled || running}
+                    onClick={() => void run()}
+                  >
+                    {running
+                      ? "Running…"
+                      : `Run ${DEMO_TERMS[selectedPair].pair.symbol} scenario`}
+                    <span aria-hidden>→</span>
+                  </button>
+                )}
               </div>
               <p className="honest">
                 {data?.enabled === false
-                  ? `Showing a recorded run from ${timestamp(RECORDED_RECEIPT.startedAt)}. Clone the repo and run npm run dev:demo to replay it yourself.`
+                  ? `Recorded local execution · ${timestamp(RECORDED_RECEIPT.startedAt)} · test funds. Open “Demo info” to run it yourself.`
                   : "Runs a fresh local replay of captured mainnet state against the real Kamino program, with test funds. Not deployed to mainnet."}
               </p>
               {error && (

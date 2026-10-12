@@ -1,0 +1,13 @@
+.git
+.env*
+.next
+build
+node_modules
+anchor
+spikes
+tests
+docs
+.agents
+.claude
+.superpowers
+submission-media

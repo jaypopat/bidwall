@@ -19,7 +19,14 @@ refused. The action accepts only a supported pair identifier.
 
 A hosted or execution-disabled page displays the committed ONyc receipt, clearly
 labelled **Recorded run**. It does not launch a runtime or need a wallet. The
-recorded bid escrows 4,700 USDC for up to 5,000 ONyc at 0.94; one transaction
+first hosted visit opens a dismissible notice explaining the local execution,
+test funds and reproduction commands. It is remembered for that tab's session
+and can be reopened with **Demo info**. The hosted **Watch verified settlement**
+link jumps to the measured money flow; pair selection and execution controls are
+available locally. Hosted status is read once; polling stops when execution is
+disabled. The execution POST route continues to refuse production requests.
+
+The recorded bid escrows 4,700 USDC for up to 5,000 ONyc at 0.94; one transaction
 repays 1,000 USDC of debt, sends 14.065940 USDC surplus to the borrower, and delivers
 1,078.793553683 ONyc to the provider. Unspent funds return after expiry.
 

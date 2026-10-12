@@ -117,6 +117,7 @@ export function Liquidation({
           return (
             <li
               key={item.id}
+              id={`stage-${item.id}`}
               ref={(element) => {
                 refs.current[index] = element;
               }}

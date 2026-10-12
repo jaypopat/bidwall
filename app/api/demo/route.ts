@@ -13,7 +13,7 @@ export async function GET(request: Request) {
   if (!localDemoEnabled(request))
     return Response.json(
       { enabled: false, running: false, output: [], receipt: null },
-      { status: 403 }
+      { headers: { "Cache-Control": "no-store" } }
     );
   return Response.json(await getDemoResponse(), {
     headers: { "Cache-Control": "no-store" },
