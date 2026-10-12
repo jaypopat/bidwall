@@ -9,11 +9,36 @@ the lender is repaid without relying on DEX depth.
 > Hackathon prototype. Runs on a local mainnet fork and offline replays of real
 > Kamino state. Not deployed to mainnet.
 
+## In plain English
+
+_Illustration using the demo's real settlement amounts._
+
+Alice holds ONyc, a token that earns reinsurance yield. She deposits it on Kamino,
+a Solana lending app, and borrows USDC against it.
+
+If ONyc's price falls far enough, her loan becomes unsafe and Kamino
+**liquidates** it: it takes some of her ONyc and sells it to repay the lender.
+Today that sale goes to a DEX. That works for small amounts, but selling $5M of
+ONyc at once would lose 43% of its value. Lenders know this, so they limit how
+much anyone can borrow against tokens like ONyc.
+
+Bidwall gives that sale a buyer who is already waiting. A credit fund locks
+$5,000 in advance with a promise: _"I'll buy up to 5,000 ONyc at $1.00."_ When
+Alice's loan is liquidated, in one transaction:
+
+- $1,078.79 comes out of the fund's locked money
+- $1,000.00 repays the lender
+- $78.79 goes back to Alice
+- the fund receives 1,078.79 ONyc
+
+No DEX is involved. The fund is happy to do this because it can redeem ONyc with
+the issuer at full value later, so it's buying at a discount.
+
 ## The problem
 
 About **$446M** is borrowed on Kamino against tokenized credit and RWA tokens
 (tokenized stocks: $5.2M). A lender can only accept collateral it can sell when a
-loan goes bad, and much of this collateral can't be sold at size:
+loan goes bad (a liquidation), and much of this collateral can't be sold at size:
 
 | Collateral on Kamino    | Collateral | Cost to sell $5M on Jupiter |
 | ----------------------- | ---------: | --------------------------: |
@@ -48,9 +73,9 @@ flowchart LR
 
 **Why this works for credit and not for stocks.** A fixed-price bid on a volatile
 stock is a free option for whoever hits it, so nobody sensible posts one. Credit
-tokens track a slow-moving NAV, so "NAV minus a small discount" is a natural
-standing price. A provider that can redeem with the issuer buys at a discount
-during a liquidation and exits at NAV. The issuer rents the capacity instead of
+tokens track a slow-moving redemption value (NAV), so "NAV minus a small
+discount" is a natural standing price. A provider that can redeem with the issuer
+buys at a discount during a liquidation and exits at NAV. The issuer rents the capacity instead of
 locking its own balance sheet.
 
 ## How a settlement works
