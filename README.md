@@ -57,7 +57,8 @@ at what price, and until when.
 - **Risk measurement**: decodes every loan in a Kamino market and every Jupiter Lend
   xStock position (7,369), runs price-stress scenarios, and compares the results
   with hourly mainnet exit-depth evidence.
-- **Web console**: runs the full NVDAx commitment and liquidation lifecycle locally.
+- **Web console**: runs the full commitment, liquidation and exhaustion lifecycle
+  for either pair from the captured replay fixtures, ONyc included.
 
 ## What we found along the way
 
@@ -76,7 +77,8 @@ Prerequisites: [toolchain](docs/TOOLCHAIN.md), Surfpool 1.3.0, Node.js and pnpm 
 pnpm install --frozen-lockfile --ignore-scripts
 npm run anchor-test   # SBF builds; 44 workspace tests, including both Kamino replays
 npm run test:client   # typed client and fixture-manifest tests
-npm run dev:demo      # local console at http://127.0.0.1:3000 (NVDAx lifecycle)
+npm run dev:demo      # local console at http://127.0.0.1:3000 (ONyc or NVDAx)
+DEMO_PAIR=onyc npm run demo:kamino   # same lifecycle headless
 ```
 
 To reproduce the ONyc liquidation against live mainnet state on a local fork:
