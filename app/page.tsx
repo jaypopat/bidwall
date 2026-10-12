@@ -1,7 +1,6 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { MarketRisk } from "./components/market-risk";
 import { Capacity } from "./components/story/capacity";
 import { DepthChart } from "./components/story/depth-chart";
 import { Liquidation } from "./components/story/liquidation";
@@ -10,8 +9,9 @@ import { CountUp, Reveal } from "./components/story/motion";
 import { Ledger, QuoteCompare, Receipt } from "./components/story/proof";
 import { DEMO_TERMS, demoBudget } from "./lib/bidwall/demo-terms";
 import type { DemoPair, DemoReceipt, DemoResponse } from "./lib/demo/types";
-import { tokens, unixTime, usd } from "./lib/story/format";
+import { timestamp, tokens, unixTime, usd } from "./lib/story/format";
 import { ONRE_ENGINE, RWA_DEBT, STOCK_DEBT } from "./lib/story/data";
+import { RECORDED_RECEIPT } from "./lib/story/recorded";
 
 const NAV = [
   ["problem", "Problem"],
@@ -57,7 +57,11 @@ export default function Home() {
     };
   }, [refresh]);
 
-  const receipt: DemoReceipt | null = data?.receipt ?? null;
+  const live = data?.receipt ?? null;
+  // Without a local runtime (or before the first run) show the recorded run.
+  const recorded = !live && !data?.running && !loading;
+  const receipt: DemoReceipt | null =
+    live ?? (recorded ? RECORDED_RECEIPT : null);
   // Shown values follow the receipt's own pair; the selector picks the next run.
   const selectedPair = nextPair ?? receipt?.pair.id ?? "onyc";
   const demo = DEMO_TERMS[receipt?.pair.id ?? selectedPair];
@@ -81,6 +85,9 @@ export default function Home() {
         );
       }
       setData((await response.json()) as DemoResponse);
+      document
+        .getElementById("liquidation")
+        ?.scrollIntoView({ behavior: "smooth" });
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : String(error));
     }
@@ -104,12 +111,14 @@ export default function Home() {
   };
 
   const status = running
-    ? "Running"
-    : receipt?.status === "passed"
-      ? "Receipt verified"
-      : receipt?.status === "failed"
-        ? "Run failed"
-        : "No run yet";
+    ? "Running live"
+    : recorded
+      ? "Recorded run"
+      : receipt?.status === "passed"
+        ? "Receipt verified"
+        : receipt?.status === "failed"
+          ? "Run failed"
+          : "No run yet";
   const error = requestError || data?.error || receipt?.error;
   const clock = (seconds: string) => unixTime(seconds).split(", ")[1];
 
@@ -242,7 +251,7 @@ export default function Home() {
               </div>
               <p className="honest">
                 {data?.enabled === false
-                  ? "Start the console with npm run dev:demo to run it."
+                  ? `Showing a recorded run from ${timestamp(RECORDED_RECEIPT.startedAt)}. Clone the repo and run npm run dev:demo to replay it yourself.`
                   : "Runs a fresh local replay of captured mainnet state against the real Kamino program, with test funds. Not deployed to mainnet."}
               </p>
               {error && (
@@ -290,7 +299,12 @@ export default function Home() {
             <span className="kicker">03 · The liquidation</span>Follow one loan,
             step by step.
           </Reveal>
-          <Liquidation demo={demo} receipt={receipt} running={running} />
+          <Liquidation
+            demo={demo}
+            receipt={receipt}
+            running={running}
+            output={data?.output ?? []}
+          />
         </section>
 
         <section className="hold">
@@ -344,21 +358,6 @@ export default function Home() {
             </div>
           </div>
         </section>
-
-        <details className="appendix">
-          <summary>
-            <span className="kicker">Appendix</span> Where we started:
-            tokenized-stock liquidation risk
-          </summary>
-          <div className="appendix-body">
-            <MarketRisk
-              remainingUsdcAtoms={settlement?.remainingFunds}
-              fundedUsdcAtoms={budget.toString()}
-              bidLabel={`${usd(demo.price, 2)} USDC per ${symbol}`}
-              symbol={symbol}
-            />
-          </div>
-        </details>
       </main>
 
       <footer className="story-footer">

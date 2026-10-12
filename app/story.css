@@ -13,21 +13,23 @@ html:has(.story) body {
 
 .story {
   --paper: #f4f1ea;
-  --card: #fbfaf6;
+  --card: #faf8f3;
   --ink: #16150f;
-  --ink-2: #4a463d;
-  --muted: #7a7466;
-  --rule: #ddd6c6;
+  --ink-2: #57524a;
+  --muted: #8a8476;
+  --rule: #e4ded1;
   --accent: #e5531a;
   --ok: #2f7d4f;
   --warn: #b7791f;
-  --serif: var(--font-ibm-plex-serif), Georgia, serif;
-  --mono: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  --sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+  --mono: var(--font-mono), ui-monospace, monospace;
   --halftone: radial-gradient(circle, currentColor 1.1px, transparent 1.5px);
   --wrap: min(1160px, calc(100vw - 48px));
   color: var(--ink);
   background: var(--paper);
-  font-family: var(--font-ibm-plex-sans), system-ui, sans-serif;
+  font-family: var(--sans);
+  font-feature-settings: "ss01", "cv11";
+  letter-spacing: -0.006em;
   min-height: 100vh;
 }
 .story h1,
@@ -134,12 +136,21 @@ html:has(.story) body {
 
 /* ---------- shared ---------- */
 .kicker {
-  display: block;
-  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 22px;
   font: 500 11px var(--mono);
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
-  color: var(--accent);
+  color: var(--muted);
+}
+.kicker::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent);
 }
 .band {
   width: var(--wrap);
@@ -151,15 +162,15 @@ html:has(.story) body {
 .band > h2,
 .split h2 {
   max-width: 760px;
-  font-size: clamp(36px, 5vw, 64px);
-  line-height: 1;
-  letter-spacing: -0.035em;
-  font-weight: 700;
+  font-size: clamp(34px, 4.6vw, 60px);
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 600;
 }
 .body {
-  max-width: 620px;
+  max-width: 580px;
   margin-top: 22px !important;
-  font: 19px/1.55 var(--serif);
+  font: 18px/1.6 var(--sans);
   color: var(--ink-2);
 }
 .reveal {
@@ -302,10 +313,10 @@ html:has(.story) body {
 }
 .hero h1 {
   max-width: 880px;
-  font-size: clamp(58px, 9.5vw, 140px);
-  line-height: 0.9;
-  letter-spacing: -0.05em;
-  font-weight: 700;
+  font-size: clamp(54px, 8.6vw, 128px);
+  line-height: 0.94;
+  letter-spacing: -0.055em;
+  font-weight: 600;
 }
 .hero h1 em {
   font-style: normal;
@@ -315,7 +326,7 @@ html:has(.story) body {
 .lead {
   max-width: 560px;
   margin-top: 30px !important;
-  font: 21px/1.5 var(--serif);
+  font: 19px/1.6 var(--sans);
   color: var(--ink-2);
 }
 .scroll-cue {
@@ -415,9 +426,7 @@ html:has(.story) body {
   opacity: 1;
 }
 .depth-series text {
-  font:
-    600 14px var(--font-ibm-plex-sans),
-    sans-serif;
+  font: 600 14px var(--sans);
 }
 .depth-series text tspan {
   font-family: var(--mono);
@@ -451,9 +460,7 @@ html:has(.story) body {
   stroke-dasharray: 5 5;
 }
 .depth-noroute text {
-  font:
-    700 18px var(--font-ibm-plex-sans),
-    sans-serif;
+  font: 600 18px var(--sans);
   fill: var(--ink);
 }
 .depth-noroute text.small {
@@ -478,7 +485,7 @@ html:has(.story) body {
 .fact p {
   margin-top: 10px;
   max-width: 460px;
-  font: 16px/1.55 var(--serif);
+  font: 15px/1.6 var(--sans);
   color: var(--ink-2);
 }
 
@@ -490,13 +497,12 @@ html:has(.story) body {
 }
 .answer-text {
   max-width: 940px;
-  font: 400 clamp(26px, 3.4vw, 44px) / 1.3 var(--serif);
-  color: var(--ink-2);
+  font: 500 clamp(26px, 3.3vw, 42px) / 1.22 var(--sans);
+  letter-spacing: -0.03em;
+  color: var(--muted);
 }
 .answer-text strong {
-  font-family: var(--font-ibm-plex-sans), sans-serif;
-  font-weight: 700;
-  letter-spacing: -0.02em;
+  font-weight: 600;
   color: var(--ink);
 }
 
@@ -580,9 +586,7 @@ html:has(.story) body {
 .terms-price span {
   display: block;
   margin-top: 10px;
-  font:
-    14px var(--font-ibm-plex-sans),
-    sans-serif;
+  font: 14px var(--sans);
   letter-spacing: 0;
   color: #b9b3a5;
 }
@@ -653,16 +657,20 @@ html:has(.story) body {
   font: 500 11px var(--mono);
   letter-spacing: 0.1em;
   text-transform: uppercase;
+  color: var(--muted);
+}
+.beat.is-active .beat-kicker {
   color: var(--accent);
 }
 .beat h3 {
-  font-size: clamp(26px, 2.8vw, 36px);
-  line-height: 1.1;
-  letter-spacing: -0.025em;
+  font-size: clamp(24px, 2.5vw, 32px);
+  line-height: 1.12;
+  letter-spacing: -0.035em;
+  font-weight: 600;
 }
 .beat p {
   max-width: 440px;
-  font: 17px/1.55 var(--serif);
+  font: 16px/1.65 var(--sans);
   color: var(--ink-2);
 }
 .beat .stage-chip {
@@ -683,7 +691,9 @@ html:has(.story) body {
   border: 1px solid var(--rule);
   border-radius: 16px;
   background: var(--card);
-  box-shadow: 0 30px 60px -40px #16150f44;
+  box-shadow:
+    0 1px 0 #fff inset,
+    0 40px 80px -50px #16150f40;
 }
 .stage-head {
   display: flex;
@@ -901,9 +911,7 @@ html:has(.story) body {
 }
 .flow-tx text {
   fill: var(--paper);
-  font:
-    700 16px var(--font-ibm-plex-sans),
-    sans-serif;
+  font: 600 16px var(--sans);
 }
 .flow-tx text.small,
 .flow-node text.small {
@@ -984,15 +992,15 @@ html:has(.story) body {
   text-align: center;
   background: color-mix(in srgb, var(--paper) 86%, transparent);
   border-radius: 14px;
-  font-size: clamp(32px, 4.4vw, 56px);
-  line-height: 1.05;
-  letter-spacing: -0.035em;
-  font-weight: 700;
+  font-size: clamp(30px, 4.2vw, 54px);
+  line-height: 1.04;
+  letter-spacing: -0.045em;
+  font-weight: 600;
 }
 .hold-text small {
   display: block;
   margin-top: 16px;
-  font: 400 17px var(--serif);
+  font: 400 16px var(--sans);
   letter-spacing: 0;
   color: var(--ink-2);
 }
@@ -1394,4 +1402,30 @@ html:has(.story) body {
   .is-playing .capacity-bar.draining span {
     width: 0;
   }
+}
+
+.story [class*="price"],
+.story strong,
+.story dd,
+.flow-node text {
+  font-variant-numeric: tabular-nums;
+}
+.stage-log {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  list-style: none;
+  border-radius: 8px;
+  background: var(--ink);
+  color: #cfc9bb;
+  font: 11px/1.6 var(--mono);
+}
+.stage-log li {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  opacity: 0.55;
+}
+.stage-log li:last-child {
+  opacity: 1;
+  color: var(--paper);
 }

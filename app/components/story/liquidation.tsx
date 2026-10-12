@@ -83,10 +83,13 @@ export function Liquidation({
   demo,
   receipt,
   running,
+  output,
 }: {
   demo: DemoTerms;
   receipt: DemoReceipt | null;
   running: boolean;
+  /** Runner output lines; the tail is shown while a run is live. */
+  output: string[];
 }) {
   const settlement = receipt?.settlement;
   const list = beats(demo, settlement);
@@ -106,6 +109,19 @@ export function Liquidation({
     refs.current.forEach((element) => element && observer.observe(element));
     return () => observer.disconnect();
   }, []);
+
+  // During a live run, follow the newest completed stage.
+  const done = receipt?.stages.length ?? 0;
+  useEffect(() => {
+    if (!running) return;
+    const latest = receipt?.stages.at(-1)?.id;
+    const target = latest ? list.findIndex((b) => b.id === latest) : 0;
+    refs.current[Math.max(0, target)]?.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [running, done]);
 
   const beat = list[active];
   const mode = beat.id === "loan" ? undefined : modes.get(beat.id);
@@ -146,6 +162,13 @@ export function Liquidation({
           <div className="stage-body" key={beat.id}>
             <Visual beat={beat.id} demo={demo} receipt={receipt} />
           </div>
+          {running && (
+            <ol className="stage-log" aria-label="Runner output">
+              {output.slice(-3).map((line, i) => (
+                <li key={`${i}-${line}`}>{line}</li>
+              ))}
+            </ol>
+          )}
           <Progress count={list.length} active={active} />
         </div>
       </div>

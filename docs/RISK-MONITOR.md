@@ -20,18 +20,13 @@ git worktree add ../bidwall-evidence evidence/quotes
 # Capture one risk snapshot and its raw decoded inputs.
 bun scripts/risk/snapshot.ts --quotes ../bidwall-evidence/quotes --out /tmp/bidwall-risk
 
-# Open the console, then click Market risk → Scan market.
-npm run dev
-
 # Offline checks.
 npm run test:risk
 npm run ci
 ```
 
-The console reads `EVIDENCE_DIR` as the **quotes directory**, defaulting to
-`../bidwall-evidence/quotes`. Set it in `.env.local` to use another directory.
-`GET /api/risk` performs a new scan; concurrent requests share only the in-flight
-scan. Its results are not saved to disk. The CLI writes:
+The monitor is a research CLI; the web console no longer embeds it. The CLI
+writes:
 
 - `risk/YYYY-MM-DD.jsonl`: scenario summaries and scan metadata.
 - `risk/raw/<timestamp>.json.gz`: decoded loan inputs, baseline health, reserves
