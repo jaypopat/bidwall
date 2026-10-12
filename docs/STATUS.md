@@ -1,13 +1,13 @@
 # Bidwall component status
 
-As of 4 October 2026, after the risk monitor and scoped demo completion. This is the current component map;
+As of 12 October 2026, after adding the OnRe ONyc pair. This is the current component map;
 older milestone documents explain the implementation history.
 
 | Component          | Current state                                                                                                        | What remains                                                                         |
 | ------------------ | -------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------ |
 | Bidwall contracts  | Funded lifecycle and external settlement implemented; 42 workspace tests pass                                        | Independent review and deployment-specific operational decisions before real funds   |
 | Lender harness     | Separate deployed test program plus malicious-program fixture                                                        | Retained for controlled adversarial tests                                            |
-| Kamino adapter     | Real v2 CPI verified on a mainnet fork and captured-binary replay                                                    | Support remains limited to the documented public NVDAx/USDC route                    |
+| Kamino adapter     | Real v2 CPI verified on a mainnet fork and captured-binary replay for NVDAx/USDC and OnRe ONyc/USDC                  | Fixed pair table; permissioned RWA tokens and other reserves not yet supported       |
 | Fresh-fork tooling | Mainnet reads, controlled local oracle stress, verified settlement, explicit fixture capture                         | Research SDK advisories remain; live state may require reselection                   |
 | Offline demo       | Full lifecycle plus a separately funded exact-capacity Kamino replay verifies exhaustion and rejects another attempt | Individually controlled steps and broader operator experience                        |
 | Shared client      | Generated Anchor bindings, exact units, PDA/account preparation, bounded settlement and error explanations; 6 tests  | Application state fetching, wallet wiring and simulation/confirmation UI             |

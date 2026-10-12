@@ -6,6 +6,17 @@ replays the real lender, farms and Token-2022 binaries against the current Bidwa
 build. **Not demonstrated:** a mainnet Bidwall deployment, production readiness,
 arbitrary Kamino markets, or an independently supplied market-maker bid.
 
+**Update 12 October 2026:** the adapter now settles a fixed table of reserve pairs.
+OnRe's ONyc/USDC pair (market `47tfyEG9SsdEnUm9cw5kY9BXngQGqu3LBoop9j5uTAv8`, ONyc
+reserve `6ZxkBSJEqsXA3Kdm2PDAzHLUdPTPUK93Lf4bAezec1UQ`, USDC reserve
+`AYL4LMc4ZCVyq3Z7XPJGWDM4H9PiWjqXAAuuHBEGVR2Z`) joins NVDAx/USDC. ONyc is classic
+SPL Token with 9 decimals, so the collateral token program is now a checked
+interface and prices are USDC atoms per whole token (10^decimals atoms). A real
+66%-LTV ONyc loan was liquidated on a fork after setting the Scope ONyc price and
+TWAP to 0.95: 1,000 USDC repaid, 1,078.79 ONyc delivered at a 1.00 USDC bid, and
+78.79 USDC paid to the borrower. `kamino-onyc.json.gz` replays it offline. The
+NVDAx-specific sections below still describe the original route.
+
 For the newer one-command offline lifecycle demo and shared client, see
 [OPERATOR-DEMO.md](OPERATOR-DEMO.md).
 
