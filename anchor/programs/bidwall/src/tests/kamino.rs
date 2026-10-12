@@ -504,3 +504,13 @@ fn kamino_borrower_payment_failure_rolls_back_completed_liquidation() {
         assert!(lender_succeeded(&f.rejects(17)), "{}", spec.name);
     }
 }
+#[test]
+fn pair_table_collateral_mints_are_unique() {
+    // Settlement finds its pair by collateral mint, so a mint may appear only once.
+    use crate::instructions::kamino::PAIRS;
+    for (i, a) in PAIRS.iter().enumerate() {
+        for b in &PAIRS[i + 1..] {
+            assert_ne!(a.collateral_mint, b.collateral_mint);
+        }
+    }
+}
