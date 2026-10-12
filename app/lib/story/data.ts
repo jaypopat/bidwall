@@ -53,6 +53,5 @@ export const NO_ROUTE = { label: "FWDI", collateral: "$22.7M" };
 export const ONRE_ENGINE = {
   date: "24 Sep 2026",
   share: "~15%",
-  quote:
-    "Lenders who accept ONyc as collateral need to be able to sell it when a position is liquidated.",
+  url: "https://www.onre.finance/blog/introducing-onres-liquidity-engine-powered-by-titan",
 };

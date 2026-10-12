@@ -9,7 +9,7 @@ import { CountUp, useReducedMotion } from "./motion";
 
 type Mode = DemoStage["mode"] | undefined;
 type Beat = {
-  id: "loan" | DemoStage["id"];
+  id: DemoStage["id"];
   kicker: string;
   title: string;
   body: string;
@@ -23,44 +23,24 @@ function beats(
   const ltv = demo.loanLtv;
   return [
     {
-      id: "loan",
-      kicker: "The loan",
-      title: `A real loan, backed by ${symbol}.`,
-      body: `Captured from mainnet: ${symbol} deposited on Kamino, USDC borrowed against it.${ltv ? ` Kamino liquidates it if the loan-to-value passes ${ltv.liquidation}%.` : ""}`,
-    },
-    {
       id: "funded",
-      kicker: "The commitment",
+      kicker: "The bid",
       title: "A fund commits before anything goes wrong.",
-      body: `The provider escrows ${usd(demoBudget(demo), 0)} USDC to buy up to ${tokens(demo.quantity, demo.pair.decimals)} ${symbol} at ${usd(demo.price, 2)} each.`,
-    },
-    {
-      id: "locked",
-      kicker: "The lock",
-      title: "The money can't leave early.",
-      body: "We try to withdraw before expiry. The program refuses, so lenders can count the bid as real capacity.",
-    },
-    {
-      id: "healthy",
-      kicker: "The rules",
-      title: "Kamino decides when to liquidate. Not us.",
-      body: ltv
-        ? `We try to liquidate the loan at ${ltv.healthy}% LTV. Kamino's own program refuses: the loan is healthy.`
-        : "We try to liquidate the healthy loan. Kamino's own program refuses.",
+      body: `The provider escrows ${usd(demoBudget(demo), 0)} USDC to buy up to ${tokens(demo.quantity, demo.pair.decimals)} ${symbol} at ${usd(demo.price, 2)} each. The loan it backs is a real ${symbol} loan captured from mainnet.`,
     },
     {
       id: "stressed",
       kicker: "The shock",
       title: "The price drops.",
-      body: `We lower the ${symbol} oracle price locally, from ${demo.healthyLabel} to ${demo.stressedLabel}. It's the only change we make to mainnet state.`,
+      body: `We lower the ${symbol} oracle price locally, from ${demo.healthyLabel} to ${demo.stressedLabel}${ltv ? `, pushing the loan past Kamino's ${ltv.liquidation}% line` : ""}. This is a test shock to captured state, with refreshed oracle timestamps and a local clock.`,
     },
     {
       id: "settled",
       kicker: "The settlement",
       title: "One transaction. No DEX.",
       body: settlement
-        ? `Kamino liquidates, and the bid buys the collateral in the same transaction: the lender is repaid ${usd(settlement.repaidUsdcAtoms, 2)} USDC and the borrower gets ${usd(settlement.borrowerUsdcAtoms, 2)} USDC back.`
-        : "Kamino liquidates, and the bid buys the collateral in the same transaction: lender repaid, borrower paid the surplus, provider receives the collateral.",
+        ? `Kamino liquidates, and the bid buys the seized ${symbol} in the same transaction at ${usd(demo.price, 2)}. ${usd(settlement.repaidUsdcAtoms, 2)} USDC of debt is repaid and ${usd(settlement.borrowerUsdcAtoms, 2)} USDC of surplus returns to the borrower.`
+        : `Kamino liquidates, and the bid buys the seized ${symbol} in the same transaction: lender repaid, borrower paid the surplus, provider receives the collateral.`,
     },
     {
       id: "withdrawn",
@@ -114,7 +94,11 @@ export function Liquidation({
   const done = receipt?.stages.length ?? 0;
   useEffect(() => {
     if (!running) return;
-    const latest = receipt?.stages.at(-1)?.id;
+    // Safety checks have their own section; follow the newest story stage.
+    const shown = receipt?.stages.filter((st) =>
+      list.some((b) => b.id === st.id)
+    );
+    const latest = shown?.at(-1)?.id;
     const target = latest ? list.findIndex((b) => b.id === latest) : 0;
     refs.current[Math.max(0, target)]?.scrollIntoView({
       behavior: "smooth",
@@ -124,12 +108,12 @@ export function Liquidation({
   }, [running, done]);
 
   const beat = list[active];
-  const mode = beat.id === "loan" ? undefined : modes.get(beat.id);
+  const mode = modes.get(beat.id);
   return (
     <div className="scrolly">
       <ol className="scrolly-beats">
         {list.map((item, index) => {
-          const itemMode = item.id === "loan" ? undefined : modes.get(item.id);
+          const itemMode = modes.get(item.id);
           return (
             <li
               key={item.id}
@@ -144,9 +128,7 @@ export function Liquidation({
               </span>
               <h3>{item.title}</h3>
               <p>{item.body}</p>
-              {item.id !== "loan" && (
-                <StageChip mode={itemMode} running={running} />
-              )}
+              <StageChip mode={itemMode} running={running} />
             </li>
           );
         })}
@@ -157,7 +139,7 @@ export function Liquidation({
             <span>
               {demo.pair.symbol} / USDC · {demo.market}
             </span>
-            {beat.id !== "loan" && <StageChip mode={mode} running={running} />}
+            <StageChip mode={mode} running={running} />
           </div>
           <div className="stage-body" key={beat.id}>
             <Visual beat={beat.id} demo={demo} receipt={receipt} />
@@ -206,21 +188,8 @@ function Visual({
   const settlement = receipt?.settlement;
   const budget = demoBudget(demo);
   switch (beat) {
-    case "loan":
-      return <Gauge demo={demo} position="healthy" label="Loan health" />;
     case "funded":
       return <Vault demo={demo} />;
-    case "locked":
-      return <Vault demo={demo} stamp="Withdrawal refused" />;
-    case "healthy":
-      return (
-        <Gauge
-          demo={demo}
-          position="healthy"
-          label="Loan health"
-          stamp="Kamino: not liquidatable"
-        />
-      );
     case "stressed":
       return <Shock demo={demo} />;
     case "settled":
@@ -233,6 +202,8 @@ function Visual({
           remaining={settlement?.remainingFunds}
         />
       );
+    default:
+      return null;
   }
 }
 
@@ -405,6 +376,30 @@ function MoneyFlow({
   ];
   return (
     <div className="vis vis-flow">
+      <div className="flow-mobile">
+        <span className="vis-label">One transaction · Kamino + Bidwall</span>
+        <dl>
+          <div>
+            <dt>Escrow pays</dt>
+            <dd>{usd(settlement?.paidUsdcAtoms, 2)} USDC</dd>
+          </div>
+          <div>
+            <dt>Debt repaid</dt>
+            <dd>{usd(settlement?.repaidUsdcAtoms, 2)} USDC</dd>
+          </div>
+          <div>
+            <dt>Borrower surplus</dt>
+            <dd>{usd(settlement?.borrowerUsdcAtoms, 2)} USDC</dd>
+          </div>
+          <div>
+            <dt>Provider receives</dt>
+            <dd>
+              {tokens(settlement?.deliveredCollateralAtoms, decimals, 2)}{" "}
+              {symbol}
+            </dd>
+          </div>
+        </dl>
+      </div>
       <svg viewBox="0 0 620 360" role="img" aria-label="Settlement money flow">
         <defs>
           {flows.map((f) => (

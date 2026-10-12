@@ -5,7 +5,7 @@
     "symbol": "ONyc",
     "decimals": 9
   },
-  "startedAt": "2026-10-12T22:03:41.662Z",
+  "startedAt": "2026-10-12T22:10:44.074Z",
   "upstreamSlot": 456189999,
   "fixtureSha256": "3cf5e1cd1f4ff17efb5bc5bfee5e49a63cd0fe0a88219d539f924b6b1bdaf10a",
   "bidwallSha256": "86b74f1a6cfd186984189784479ea26ed10f9f9b9e8369d1a0aa3e846400ed10",
@@ -13,123 +13,123 @@
     {
       "label": "create market",
       "status": "confirmed",
-      "signature": "5jJHLvFchfJaJJpfqVdvi75edUfWDpe8hqpCbiC226d7wzEbXS53CiRLQPfGAr79zVAKa8QBCCEAB6YzWWifWyXN",
+      "signature": "5AeUjdkfxdRSHTyJT1C7C9K67WSFSUHBrnTHHo9fdG6Df4E5iSEK7hBB866JqbeJCoGSmuEqwnow7QDyZwmAX6YD",
       "slot": 456190005,
       "unitsConsumed": 7291
     },
     {
       "label": "create, fund and activate bid",
       "status": "confirmed",
-      "signature": "5yxNzcYQBfUa6CrpCGyMSsctoLoHXkPK1UXfpLHaEqsfhtuVu4tem4pM6jzDVYdvn73FJsaoFZcqFzr73FckTZBj",
+      "signature": "rZQJgBjzeZQHnRCh5jVS6m4dHKuJqm2iRVwnPdSyL8kwmv2mc7EGhWDT5HQ9k5BU1wyPwaxuhm344FvUpwirqYH",
       "slot": 456190007,
-      "unitsConsumed": 52517
+      "unitsConsumed": 45017
     },
     {
       "label": "create settlement token accounts",
       "status": "confirmed",
-      "signature": "2waRnayeEibpx7PFxnhLnKiDpDv6e1SfYurYtTfnzcH68Y1RJ2qTDGycR6XyB3JqupgPJkjvjzQAYx7w8JAq2N7j",
+      "signature": "kdai5Ct8bASQnjNBG5SdrQ9CAGpX11JjfRxsaGHhQK8jr2FPPujJ3KsPQT2dVUzx7gT3DQpyCkkBWr3kUzTbiLh",
       "slot": 456190009,
-      "unitsConsumed": 76674
+      "unitsConsumed": 72174
     },
     {
       "label": "create lookup table",
       "status": "confirmed",
-      "signature": "5ia5hkTA3MYujLK5C5YtrSFBFptjkDq2NVVTiUek3tiiMCPmSBRUGSGDxvxEsVTVgjegrD81KJKutwTaHh59sB93",
+      "signature": "63qb8S7KumTizkjFS6mMYnjQieRQYmu5BNXsyx1ELrAbyS3eEgvagHdLMmqftLAdgt4SYQCFcbthVekNUq2nQnYZ",
       "slot": 456190011,
       "unitsConsumed": 10667
     },
     {
       "label": "extend lookup table",
       "status": "confirmed",
-      "signature": "2MZMo4MaCGtwAj72wsh29kFNT4T1U3JF1KUMghopfLiHTmQZ4UnvzpmSsPSsGTeXEuP6opESBARthCDW1wuW4o6i",
+      "signature": "zL9rL8BpzvZRaWd45pAXvcZMctrHBaG6Z7PBbfdqKr7WGSZnLNTZGxuTeX9dfWjc2kEHqpi4tRKAyKUaYhMqsP6",
       "slot": 456190013,
       "unitsConsumed": 11807
     },
     {
       "label": "extend lookup table",
       "status": "confirmed",
-      "signature": "4Yi67rcXHT7ZARoKn3P7RuEpCziVtqiZ8GvkseDZwJkG1Rn1uJAuf84okYEDwwydvXhf7qrVk3oPY8Zr8mzYCpCg",
+      "signature": "2K3ZeU8PByXgNDQD7QyX4nFsvbBArQVRMJ1smDTUd8NTaurFUYMhdjBbYWJ8vBUxuSeY8WPsTobdX64jYD3dgAMY",
       "slot": 456190015,
       "unitsConsumed": 8280
     },
     {
       "label": "activate lookup table",
       "status": "confirmed",
-      "signature": "LdiD9XW7NRRJphcAm5tk5rwpQF1YJYLnu4rFqc9dHz5J7eroYDnmw8ZGGurdx2RWffFxVxBeGyTDai1D83MGyGp",
+      "signature": "4LfQVFfktVe9UcUJ6CJ3Z1dL7T4fJVgp2vnzT1LdDWd5TfG1aGrjQ3ovFZyASaeb4AU7ofKW81dQ1PHrs7f63Da3",
       "slot": 456190017,
       "unitsConsumed": 150
     },
     {
       "label": "early withdrawal",
       "status": "rejected-in-simulation",
-      "unitsConsumed": 15600,
+      "unitsConsumed": 12600,
       "reason": "This action is outside its permitted commitment window."
     },
     {
       "label": "healthy loan liquidation",
       "status": "rejected-in-simulation",
-      "unitsConsumed": 176914,
+      "unitsConsumed": 173914,
       "reason": "The lender says this loan is healthy."
     },
     {
       "label": "eligible liquidation through real Kamino",
       "status": "confirmed",
-      "signature": "3QPLuR5oHvZpd7Whf24efSt8vucS4yt8MzqXrSmQHHpQ6rVkCofbAAaCwPqwixpYauNK72afDFhQAP2qXZuFqWTs",
+      "signature": "3kXNDMpkCqx8i2y3JxeCYBneKrVr7mtaEPdVHFyvzs436QzNjLJXC2SHqsT9d65cNUXTy3CUxFXtwiPHZMALvp6u",
       "slot": 456190019,
-      "unitsConsumed": 264042
+      "unitsConsumed": 261042
     },
     {
       "label": "replay with stale bid expectation",
       "status": "rejected-in-simulation",
-      "unitsConsumed": 98114,
+      "unitsConsumed": 95114,
       "reason": "The bid capacity or loan quote has changed."
     },
     {
       "label": "withdraw unspent funds after expiry",
       "status": "confirmed",
-      "signature": "5UqKBNZ2BQSiUox3eHfRU5CM1NjH7cSpc8WvtCaFQ5bKe71qa2ANmymBh2LRqmUqgXRqS99QvZZq5MPuv9haa3Y7",
+      "signature": "bAAYBxdMm9FZWP9cs5ivy7pJFNBPh3UeEBLLypY9SJdDsxXmmWVxXjMJxa2AYeTC4MDdY3TPSHGUeAaSC9H9AKn",
       "slot": 456190021,
-      "unitsConsumed": 16777
+      "unitsConsumed": 13777
     },
     {
       "label": "fund exact-capacity bid \u00b7 separate reset replay",
       "status": "confirmed",
-      "signature": "3GkXFxmGXQSK3Ls6on1i7VhEoth3TZYc4sX9Vh3TK2WFjJJHuAQUDh1J5QgNMV8nY6vLbv6mTCxzgNGCuVixCuz4",
+      "signature": "CbLqKJ1iRXG1EECAnvB8Qt6fGzjY5CCENa4yWGrzSgYAJACeSkv54Zh9yr43bn9n6j38AAKRKy59CdhvMtrVbGB",
       "slot": 456190023,
-      "unitsConsumed": 42017
+      "unitsConsumed": 48017
     },
     {
       "label": "create exact-capacity settlement accounts",
       "status": "confirmed",
-      "signature": "5NBpSLbkNHKa2vbD8XXvqATgsYhbJVq1CTdTbYiRSt1PXXgBkZ2tEZaxLQ2ARoNUvQCxF3mBvNnBq5zXsrS1HK7",
+      "signature": "2Qfz7ZQEGH2JPkvZQZt1banBtACQm9HJ6LV3DoayHgXEqr6tJZjoqsCmkX4qJWQJnPBQV2wYGhaJA7vvCWN4dG6a",
       "slot": 456190025,
-      "unitsConsumed": 57000
+      "unitsConsumed": 55500
     },
     {
       "label": "extend capacity-case lookup table",
       "status": "confirmed",
-      "signature": "2ccvJCwq56Xh4e41juN1bPinChUxfFTjfd6MFKzcMjK76pfboAmyABWMNcVcqwHGrjyQWq8e6g8ygzk8pkoQgMHM",
+      "signature": "675BQ3veBpkw5LDfmPycWyfBrtkfYdg4sBvG9DKde3kcxMmzvZ1qX2xDwCQpNaMP6auiLg7yo6Wt3NsC3rQjhK9v",
       "slot": 456190027,
       "unitsConsumed": 7693
     },
     {
       "label": "activate capacity-case lookup table",
       "status": "confirmed",
-      "signature": "5XQUWnzUF2YPNdyF3zvMgHdaP3s321KqGwWCgH5KFD5vjwXAD3MgwAQnQPqYRzJV5svioKALxaiXvQasJW41geh7",
+      "signature": "3s2sxiVUrtKghdHwSA9kjNm9TmnixyoRUAggL1yzVJrYUHztmC4JvvsXNoG1GkUzBbYMRreE2sbGzj9rJkY9q3AF",
       "slot": 456190029,
       "unitsConsumed": 150
     },
     {
       "label": "exhaust exact-capacity bid through real Kamino",
       "status": "confirmed",
-      "signature": "2bkCUZ2fzMPAgYL19X6HCVV8i22eMwm9njJBJ1VyyZsdxvEd28zha3aTkLWPDpgvYnFCeHkmcSzizrb8Dq1RqbZ4",
+      "signature": "2nZeHCwhw9WbgUnqQ2AEoWt8UhFrZi7oEaqeGQrnbconNNHZ39urtjujuRH6dM2gDN7dfxhsskKwW5Zqj6yfw1ku",
       "slot": 456190031,
-      "unitsConsumed": 259545
+      "unitsConsumed": 267045
     },
     {
       "label": "another attempt on exhausted bid",
       "status": "rejected-in-simulation",
-      "unitsConsumed": 93571,
+      "unitsConsumed": 101071,
       "reason": "The bid is not in the required lifecycle state."
     }
   ],
@@ -163,13 +163,13 @@
     "start": "1791839621",
     "expiry": "1791843222",
     "scenarioNow": "1791839622",
-    "price": "1000000",
+    "price": "940000",
     "quantity": "5000000000000",
-    "fundedUsdcAtoms": "5000000000"
+    "fundedUsdcAtoms": "4700000000"
   },
   "depletion": {
-    "bid": "BMyf9onMdyKJzEec8FGqJre54Hryg8BUnAxyeU1Z1bTN",
-    "fundedUsdcAtoms": "1078793553",
+    "bid": "8ibUCU6sLi3feGsgxiEeJBi53CkD5xkPufpHcSistpcA",
+    "fundedUsdcAtoms": "1014065940",
     "deliveredCollateralAtoms": "1078793553683",
     "remainingFunds": "0",
     "remainingQuantity": "0",
@@ -177,18 +177,18 @@
     "status": "exhausted-and-rejected-in-simulation"
   },
   "settlement": {
-    "bid": "5nkfJ1u8A4cWEnKATsirmHTEZg4aqjdWaMwGJAuevJn3",
+    "bid": "8BLpSi5BCA2zxR1WRB56vpiVH3zATD2DoRqj7Quo74v6",
     "obligation": "4RUxiY9Hb3qLPY3FvRFoMGMpYpDfYJP9iU5HkhDK3iqU",
-    "paidUsdcAtoms": "1078793553",
+    "paidUsdcAtoms": "1014065940",
     "repaidUsdcAtoms": "1000000000",
-    "borrowerUsdcAtoms": "78793553",
+    "borrowerUsdcAtoms": "14065940",
     "deliveredCollateralAtoms": "1078793553683",
     "remainingQuantity": "3921206446317",
-    "remainingFunds": "3921206447"
+    "remainingFunds": "3685934060"
   },
   "capacityFailure": {
-    "requestedRepay": "3921206448",
-    "availableFunds": "3921206447",
+    "requestedRepay": "3685934061",
+    "availableFunds": "3685934060",
     "status": "rejected-before-signing"
   }
 }

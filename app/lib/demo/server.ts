@@ -9,7 +9,6 @@ import type {
   DemoStage,
   DemoStep,
 } from "./types";
-import { readDeliveryQuote } from "./quote";
 import { DEMO_TERMS, demoBudget, type DemoTerms } from "../bidwall/demo-terms";
 
 const receiptPath = resolve(process.cwd(), "build/demo/receipt.json");
@@ -281,8 +280,6 @@ async function readReceipt(): Promise<DemoReceipt | null> {
 
 export async function getDemoResponse(): Promise<DemoResponse> {
   const receipt = await readReceipt();
-  if (receipt?.status === "passed")
-    receipt.comparison = await readDeliveryQuote(receipt);
   return {
     enabled: true,
     running: state.running,

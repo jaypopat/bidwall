@@ -1,12 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Capacity } from "./components/story/capacity";
+import { Counterfactual } from "./components/story/counterfactual";
 import { DepthChart } from "./components/story/depth-chart";
 import { Liquidation } from "./components/story/liquidation";
 import { LiquidityField } from "./components/story/liquidity-field";
 import { CountUp, Reveal } from "./components/story/motion";
-import { Ledger, QuoteCompare, Receipt } from "./components/story/proof";
+import { Ledger, Receipt } from "./components/story/proof";
+import { Trust } from "./components/story/trust";
 import { DEMO_TERMS, demoBudget } from "./lib/bidwall/demo-terms";
 import type { DemoPair, DemoReceipt, DemoResponse } from "./lib/demo/types";
 import { timestamp, tokens, unixTime, usd } from "./lib/story/format";
@@ -15,9 +16,9 @@ import { RECORDED_RECEIPT } from "./lib/story/recorded";
 
 const NAV = [
   ["problem", "Problem"],
-  ["bid", "The bid"],
+  ["versus", "Why it matters"],
   ["liquidation", "Liquidation"],
-  ["capacity", "Capacity"],
+  ["trust", "Checks"],
   ["proof", "Proof"],
 ] as const;
 
@@ -25,9 +26,6 @@ export default function Home() {
   const [data, setData] = useState<DemoResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [requestError, setRequestError] = useState<string>();
-  const [quoting, setQuoting] = useState(false);
-  const [quoteError, setQuoteError] = useState<string>();
-  const [nowMs, setNowMs] = useState<number | null>(null);
   const [nextPair, setNextPair] = useState<DemoPair["id"]>();
 
   const refresh = useCallback(async () => {
@@ -39,7 +37,6 @@ export default function Home() {
       }
       if (!response.ok) throw new Error(`Demo API returned ${response.status}`);
       setData((await response.json()) as DemoResponse);
-      setNowMs(Date.now());
       setRequestError(undefined);
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : String(error));
@@ -69,6 +66,11 @@ export default function Home() {
   const budget = demoBudget(demo);
   const settlement = receipt?.settlement;
   const running = Boolean(data?.running);
+  // The counterfactual is about ONyc: use this run if it is one, else the recording.
+  const onycReceipt =
+    receipt?.pair.id === "onyc" && receipt.status === "passed"
+      ? receipt
+      : RECORDED_RECEIPT;
 
   const run = async () => {
     setRequestError(undefined);
@@ -90,23 +92,6 @@ export default function Home() {
         ?.scrollIntoView({ behavior: "smooth" });
     } catch (error) {
       setRequestError(error instanceof Error ? error.message : String(error));
-    }
-  };
-
-  const compareQuote = async () => {
-    setQuoting(true);
-    setQuoteError(undefined);
-    try {
-      const response = await fetch("/api/demo/quote", { method: "POST" });
-      if (!response.ok) {
-        const body = await response.json().catch(() => ({}));
-        throw new Error(body.error ?? "Could not request the quote");
-      }
-      await refresh();
-    } catch (error) {
-      setQuoteError(error instanceof Error ? error.message : String(error));
-    } finally {
-      setQuoting(false);
     }
   };
 
@@ -155,7 +140,7 @@ export default function Home() {
           <div className="hero-inner">
             <span className="kicker">01 · The problem</span>
             <h1>
-              Selling $5M of ONyc costs{" "}
+              Selling $5M of ONyc quoted{" "}
               <em>
                 <CountUp
                   to={43}
@@ -163,13 +148,16 @@ export default function Home() {
                   format={(v) => String(Math.round(v)).padStart(2, "\u2007")}
                 />
                 %
-              </em>
-              .
+              </em>{" "}
+              less.
             </h1>
             <p className="lead">
               {RWA_DEBT} is borrowed on Kamino against tokenized credit: ONyc,
               USDe, AUTO and more. When those loans go bad, the collateral has
-              to be sold. Much of it has nowhere to go.
+              to be sold. A large sale can overwhelm the available exit.
+            </p>
+            <p className="hero-source">
+              Jupiter quote · 12 Oct 2026 · versus oracle value
             </p>
             <a className="scroll-cue" href="#depth">
               See the depth <span aria-hidden>↓</span>
@@ -192,8 +180,11 @@ export default function Home() {
             <Reveal className="fact" delay={200}>
               <strong>{ONRE_ENGINE.share}</strong>
               <p>
-                of OnRe&apos;s own underwriting capital now funds buy quotes for
-                ONyc ({ONRE_ENGINE.date}). &ldquo;{ONRE_ENGINE.quote}&rdquo;
+                of OnRe&apos;s underwriting capital is allocated to ONyc
+                liquidity ({ONRE_ENGINE.date}).{" "}
+                <a href={ONRE_ENGINE.url} target="_blank" rel="noreferrer">
+                  Read OnRe&apos;s explanation ↗
+                </a>
               </p>
             </Reveal>
           </div>
@@ -204,21 +195,36 @@ export default function Home() {
             <strong>Bidwall is a buyer that is already waiting.</strong> A fund
             locks money in advance at a fixed price. When the lender liquidates,
             the bid buys the collateral inside the same transaction. No DEX
-            depth needed, and the issuer doesn&apos;t pay for it.
+            depth needed for that fill. The aim: let issuers source this capital
+            from outside providers.
           </Reveal>
+        </section>
+
+        <section className="band" id="versus">
+          <Reveal as="h2">
+            <span className="kicker">02 · Why it matters</span>
+            The sale can cost more than the liquidation earns.
+          </Reveal>
+          <Reveal as="p" className="body">
+            Small sales fit. At larger sizes, the exit can consume the
+            liquidator&apos;s entire margin. Explore the observed ONyc quotes,
+            then see the transaction that gives the sale a funded buyer.
+          </Reveal>
+          <Counterfactual demo={DEMO_TERMS.onyc} receipt={onycReceipt} />
         </section>
 
         <section className="band" id="bid">
           <div className="split">
             <div>
               <Reveal as="h2">
-                <span className="kicker">02 · The bid</span>A fixed price, paid
+                <span className="kicker">03 · The bid</span>A fixed price, paid
                 for upfront.
               </Reveal>
               <Reveal as="p" className="body" delay={80}>
                 A provider escrows USDC for one collateral token, at one price,
                 until one expiry. It can&apos;t be cancelled early, so lenders
-                and risk teams can count it as real capacity.
+                and risk teams can inspect its price, remaining funds and
+                expiry.
               </Reveal>
               <div className="controls">
                 <div
@@ -263,7 +269,7 @@ export default function Home() {
             <Reveal className="terms-card" delay={120}>
               <div className="terms-head">
                 <span>{demo.market}</span>
-                <span className="dot-live">Funded</span>
+                <span className="dot-live">Funded at start</span>
               </div>
               <div className="terms-price">
                 {usd(demo.price, 2)}
@@ -281,7 +287,7 @@ export default function Home() {
                   <dd>{usd(budget, 0)} USDC</dd>
                 </div>
                 <div>
-                  <dt>Term</dt>
+                  <dt>Local term</dt>
                   <dd>
                     {receipt?.commitment
                       ? `${clock(receipt.commitment.start).replace(" UTC", "")}–${clock(receipt.commitment.expiry)}`
@@ -296,8 +302,14 @@ export default function Home() {
 
         <section className="band" id="liquidation">
           <Reveal as="h2">
-            <span className="kicker">03 · The liquidation</span>Follow one loan,
-            step by step.
+            <span className="kicker">04 · The liquidation</span>
+            Here is the money actually moving.
+          </Reveal>
+          <Reveal as="p" className="body">
+            A real captured {symbol} loan, test funds, and Kamino&apos;s
+            deployed program on a local replay. This repays $1,000 of debt; the
+            large-sale comparison above illustrates the need for capacity at
+            scale.
           </Reveal>
           <Liquidation
             demo={demo}
@@ -310,7 +322,7 @@ export default function Home() {
         <section className="hold">
           <LiquidityField fracture={0} floor={0.75} className="hold-field" />
           <Reveal as="p" className="hold-text">
-            With a committed bid, the exit doesn&apos;t break.
+            A funded buyer. A fixed price. One transaction.
             <small>
               {settlement
                 ? `${tokens(settlement.deliveredCollateralAtoms, decimals, 2)} ${symbol} bought at ${usd(demo.price, 2)}. No slippage, no DEX.`
@@ -319,42 +331,28 @@ export default function Home() {
           </Reveal>
         </section>
 
-        <section className="band" id="capacity">
+        <section className="band" id="trust">
           <Reveal as="h2">
-            <span className="kicker">04 · Capacity</span>When the money is
-            spent, it says no.
+            <span className="kicker">05 · The checks</span>
+            What makes the commitment real?
           </Reveal>
           <Reveal as="p" className="body" delay={80}>
-            A separate replay funds a bid with exactly one liquidation&apos;s
-            worth, spends it, then tries again. Capacity is real money, not a
-            promise.
+            The same run tries early withdrawal, healthy-loan liquidation and a
+            stale fill. Then a separate replay spends a bid to zero and tries
+            again. Each attempt must be refused.
           </Reveal>
-          <Capacity
-            depletion={receipt?.depletion}
-            symbol={symbol}
-            decimals={decimals}
-          />
+          <Trust demo={demo} receipt={receipt} running={running} />
         </section>
 
         <section className="band" id="proof">
           <Reveal as="h2">
-            <span className="kicker">05 · Proof</span>Every step is on the
+            <span className="kicker">06 · Proof</span>Every step is on the
             record.
           </Reveal>
           <div className="proof-grid">
             <Ledger receipt={receipt} running={running} />
             <div className="proof-side">
               <Receipt receipt={receipt} />
-              <QuoteCompare
-                receipt={receipt}
-                symbol={symbol}
-                stressedLabel={demo.stressedLabel}
-                quoting={quoting}
-                quoteError={quoteError}
-                disabled={running || receipt?.status !== "passed"}
-                nowMs={nowMs}
-                onQuote={() => void compareQuote()}
-              />
             </div>
           </div>
         </section>

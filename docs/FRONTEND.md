@@ -1,15 +1,39 @@
-# Local operator console
+# Story console
 
-The web interface at `/` now presents the fixed NVDAx/USDC scenario as an operator console. It is an **interactive launcher and receipt viewer** for the already tested offline workflow. Its commitment and capacity figures come from the script's tested terms and the latest exported receipt; they are not a continuously live account feed. The Surfpool runtime stops after each run.
+The page at `/` explains committed exit liquidity, then shows a verified local
+Kamino liquidation. ONyc/USDC is the default; NVDAx/USDC is also supported.
 
-Run `npm run dev:demo` and open <http://127.0.0.1:3000>. Click **Run local scenario** to start a fresh build and replay. The UI polls `/api/demo` and marks six stages as they complete: funding, early-withdrawal rejection, healthy-loan rejection, a **local** Scope price change from 225 to 150, verified atomic settlement, and withdrawal after expiry. It separately displays escrow spend, debt repayment, borrower residual, raw NVDAx delivery, capacity at settlement, local signatures and fixture provenance. Replay and insufficient-capacity checks remain in the execution ledger. The receipt and full logs remain in ignored `build/demo/receipt.json` and `build/demo/surfpool.log`.
+The story follows six sections: observed depth, a sale-size comparison, the funded
+bid, a four-beat liquidation, rejection checks, and the execution record. The
+liquidation beats are funding → local price shock → settlement → expiry. The
+money-flow visual reads the receipt; early withdrawal, healthy-loan and stale-fill
+rejections appear after settlement, with a separate exact-capacity replay.
 
-The action route only works when `BIDWALL_LOCAL_DEMO=1`, in a development build, on the loopback-bound `dev:demo` server. It rejects foreign Host and Origin headers and refuses concurrent runs. It calls the pinned `demo:kamino` command; it never accepts an arbitrary RPC, program ID, address, amount or shell command from the browser. `npm run dev` renders the console with execution disabled.
+Run `npm run dev:demo` and open <http://127.0.0.1:3000>. **Run ONyc scenario**
+starts a fresh build and offline replay, using captured mainnet state, Kamino's
+actual deployed binaries and local test funds. The page polls `/api/demo`, follows
+completed story stages, and streams progress. The runner stops its isolated
+Surfpool runtime at the end. Execution is enabled only in development with the
+local-demo flag, loopback Host and same-origin requests; concurrent runs are
+refused. The action accepts only a supported pair identifier.
 
-This is a scripted scenario using one ephemeral signer for provider and keeper, local test funds, a captured public Kamino binary and a locally stressed Scope account. It does not ask for a wallet signature, accept custom bids, continuously watch live obligations, or submit to a public network. The runner publishes atomic partial receipts as stages complete, validates the oracle override and all four settlement legs, and only then writes a passed receipt. Rejected actions in the browser's ledger are simulations or client-boundary checks; the on-chain adversarial suite separately verifies rollback.
+A hosted or execution-disabled page displays the committed ONyc receipt, clearly
+labelled **Recorded run**. It does not launch a runtime or need a wallet. The
+recorded bid escrows 4,700 USDC for up to 5,000 ONyc at 0.94; one transaction
+repays 1,000 USDC of debt, sends 14.065940 USDC surplus to the borrower, and delivers
+1,078.793553683 ONyc to the provider. Unspent funds return after expiry.
 
-The commitment panel now records start and expiry from the funded bid, explicitly on the historical scenario clock. A separate capacity replay funds a new bid for exactly the measured liquidation, confirms full exhaustion and rejects another attempt. The lender state is reset between cases; the UI does not present this as a second observed mainnet loan.
+The size comparison holds the replay's collateral/debt ratio constant and applies
+observed Jupiter sale haircuts. It explicitly labels scaled bid funding as
+illustrative, not committed capital or an executed large liquidation. **Check on
+Jupiter now** calls `/api/depth` for $100k, $1M or $5M of a supported token, sized
+from Jupiter's token price. The live reference differs from the recorded oracle
+reference; both are labelled. Quotes are cached for a minute and never executed.
+No-route responses remain distinct from request failures; an unavailable live
+quote leaves the dated snapshot visible. Titan/OnRe and staged sales are other
+possible exits, so poor Jupiter depth alone does not establish bad debt.
 
-After a passed run, **Get mainnet quote** requests an indicative Jupiter sell quote for exactly the delivered raw atoms, using 50 bps slippage. The panel shows output/minimum output, route, slot, timestamp, reference price and hashed raw evidence, and labels the mismatch between mainnet prices and the local oracle stress. It does not execute a swap. Polling reads stored evidence; new runs hide quotes from previous receipts. The quote route uses the same loopback/development/Origin guard and accepts no user-supplied trade inputs.
-
-The quote observer and [read-only risk monitor](RISK-MONITOR.md) are implemented. The next functional increment is wallet-driven creation/funding against a persistent local runtime, with account reads and bounded settlement review before signature. That work needs a separate signer/cluster design and should preserve the narrow route and exact raw-unit labels. Commercial validation and a longer evidence series remain outstanding.
+The shader, dither transitions and money-flow animations respect reduced-motion
+preferences. The narrow console demonstrates settlement and refusal checks, not
+independent provider participation, a mainnet deployment, wallet-driven bidding
+or a continuously operating keeper.

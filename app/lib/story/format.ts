@@ -2,7 +2,10 @@
 
 export function usd(atoms?: string | bigint, places = 6) {
   if (atoms === undefined) return "—";
-  return tokens(atoms, 6, places, places);
+  // Round only the display, using integer arithmetic. Settlement values stay exact.
+  const precision = 10n ** BigInt(6 - places);
+  const rounded = ((BigInt(atoms) + precision / 2n) / precision) * precision;
+  return tokens(rounded, 6, places, places);
 }
 
 /** Raw atoms as a whole-token amount with between `min` and `max` decimals. */

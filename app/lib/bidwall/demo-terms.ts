@@ -48,7 +48,9 @@ export const DEMO_TERMS: Record<KaminoPair["id"], DemoTerms> = {
     market: "Kamino v2 · OnRe market",
     fixture: "kamino-onyc.json.gz",
     manifest: "manifest-onyc.json",
-    price: 1_000_000n, // 1.00 USDC per ONyc: a redemption-backed standing bid
+    // 0.94 USDC per ONyc: just under the stressed 0.95, so the provider buys below
+    // the marked-down value and payment still covers this liquidation's debt.
+    price: 940_000n,
     quantity: 5_000_000_000_000n, // 5,000 ONyc
     maxRepay: 1_000_000_000n,
     scopeIndices: [350, 478],

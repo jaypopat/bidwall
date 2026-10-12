@@ -274,17 +274,6 @@ html:has(.story) body {
   background: var(--accent);
   transform: translateY(-1px);
 }
-.btn-secondary {
-  padding: 10px 16px;
-  border: 1px solid var(--ink);
-  border-radius: 8px;
-  background: transparent;
-  color: var(--ink);
-  font-weight: 600;
-  font-size: 13px;
-  white-space: nowrap;
-}
-
 /* ---------- hero ---------- */
 .hero {
   position: relative;
@@ -310,6 +299,11 @@ html:has(.story) body {
 }
 .hero-inner a {
   pointer-events: auto;
+}
+.hero-source {
+  margin-top: 18px !important;
+  font: 11px/1.5 var(--mono);
+  color: var(--ink-2);
 }
 .hero h1 {
   max-width: 880px;
@@ -507,6 +501,150 @@ html:has(.story) body {
 }
 
 /* ---------- bid ---------- */
+/* The contrast is the explanation; its numbers carry the emphasis. */
+.versus {
+  margin-top: 44px;
+}
+.versus-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+.versus-head p {
+  margin-top: 8px;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.size-switch {
+  display: flex;
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+}
+.size-switch button {
+  padding: 10px 18px;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--ink-2);
+  font: 500 13px var(--mono);
+}
+.size-switch button[aria-pressed="true"] {
+  background: var(--ink);
+  color: var(--paper);
+}
+.versus-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  border-block: 1px solid var(--rule);
+}
+.versus-col {
+  min-width: 0;
+  padding: 32px 36px 32px 0;
+}
+.versus-col.with {
+  padding: 32px 0 32px 36px;
+  border-left: 1px solid var(--rule);
+}
+.versus-tag {
+  display: block;
+  margin-bottom: 30px;
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.versus-col dl {
+  margin: 0;
+}
+.versus-col dl > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 16px;
+  min-height: 56px;
+}
+.versus-col dt {
+  font-size: 14px;
+  color: var(--ink-2);
+}
+.versus-col dt small {
+  display: block;
+  margin-top: 5px;
+  font: 10px/1.5 var(--mono);
+  color: var(--muted);
+}
+.versus-col dd {
+  margin: 0;
+  font: 500 18px var(--mono);
+  white-space: nowrap;
+}
+.versus-result {
+  margin-top: 32px;
+}
+.versus-result strong {
+  display: block;
+  margin-top: 10px;
+  font-size: clamp(32px, 4.5vw, 60px);
+  line-height: 1;
+  font-weight: 600;
+  letter-spacing: -0.045em;
+  color: var(--ok);
+}
+.is-broken .without .versus-result strong {
+  color: var(--accent);
+}
+.versus-result p {
+  margin-top: 18px;
+  max-width: 460px;
+  min-height: 72px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.link-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 24px;
+  padding: 0 0 5px;
+  border: 0;
+  border-bottom: 1px solid var(--ink);
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  font-size: 13px;
+}
+.versus-note,
+.versus-foot {
+  margin-top: 18px !important;
+  font-size: 13px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.versus-foot > p {
+  max-width: 800px;
+}
+.versus-foot details {
+  margin-top: 12px;
+  max-width: 900px;
+}
+.versus-foot summary {
+  width: fit-content;
+  cursor: pointer;
+  font-size: 12px;
+}
+.versus-foot details p {
+  margin-top: 12px;
+}
+.fact a,
+.versus-foot a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .split {
   display: grid;
   grid-template-columns: 1.05fr 0.95fr;
@@ -884,6 +1022,9 @@ html:has(.story) body {
 }
 
 /* money flow */
+.flow-mobile {
+  display: none;
+}
 .vis-flow svg {
   width: 100%;
   height: auto;
@@ -1006,6 +1147,37 @@ html:has(.story) body {
 }
 
 /* ---------- capacity ---------- */
+.checks {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 28px;
+  margin-top: 48px;
+}
+.check {
+  border-top: 2px solid var(--ink);
+  padding-top: 24px;
+}
+.check h3 {
+  margin-top: 20px;
+  font-size: 23px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.check p {
+  margin-top: 12px;
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--ink-2);
+}
+.sub-head {
+  margin-top: 70px !important;
+  font-size: 26px;
+  font-weight: 600;
+  letter-spacing: -0.03em;
+}
+.sub-head + .capacity {
+  margin-top: 24px;
+}
 .capacity {
   position: relative;
   display: grid;
@@ -1077,15 +1249,18 @@ html:has(.story) body {
   margin-top: 48px;
   align-items: start;
 }
+.proof-grid > * {
+  min-width: 0;
+}
 .ledger,
-.receipt,
-.quote {
+.receipt {
   border: 1px solid var(--rule);
   border-radius: 14px;
   background: var(--card);
 }
 .ledger-head {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 12px;
   padding: 18px 20px;
@@ -1179,71 +1354,11 @@ html:has(.story) body {
   display: grid;
   gap: 22px;
 }
-.receipt,
-.quote {
+.receipt {
   padding: 20px;
 }
-.quote-head {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-}
-.quote-head p {
-  margin-top: 6px !important;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink-2);
-}
-.quote-values {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-top: 18px;
-}
-.quote-values span {
-  display: block;
-  font: 11px var(--mono);
-  text-transform: uppercase;
-  color: var(--muted);
-}
-.quote-values strong {
-  font: 600 20px var(--mono);
-}
-.quote-meta {
-  margin-top: 12px !important;
-  font: 11px/1.5 var(--mono);
-  color: var(--muted);
-}
-.quote-error {
-  margin-top: 12px !important;
-  color: var(--accent);
-  font-size: 13px;
-}
 
-/* ---------- appendix & footer ---------- */
-.appendix {
-  width: var(--wrap);
-  margin: 0 auto 80px;
-  border-top: 1px solid var(--rule);
-}
-.appendix summary {
-  padding: 28px 0;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 600;
-}
-.appendix summary .kicker {
-  display: inline;
-  margin-right: 10px;
-  color: var(--muted);
-}
-.appendix-body {
-  padding: 0 28px 10px;
-  border-radius: 14px;
-  background: #0f1612;
-  color: #eef4ed;
-}
+/* ---------- footer ---------- */
 .story-footer {
   display: flex;
   justify-content: space-between;
@@ -1331,11 +1446,34 @@ html:has(.story) body {
   .split,
   .facts,
   .proof-grid,
-  .capacity {
+  .capacity,
+  .checks,
+  .versus-grid {
     grid-template-columns: 1fr;
   }
   .split {
     gap: 40px;
+  }
+  .versus-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .versus-col,
+  .versus-col.with {
+    padding: 28px 0;
+    border-left: 0;
+  }
+  .versus-col.with {
+    border-top: 1px solid var(--rule);
+  }
+  .versus-col dd {
+    font-size: 15px;
+  }
+  .versus-col dt {
+    font-size: 13px;
+  }
+  .versus-result p {
+    min-height: 0;
   }
   .scrolly {
     grid-template-columns: 1fr;
@@ -1368,6 +1506,33 @@ html:has(.story) body {
   }
   .shock-price {
     font-size: 60px;
+    flex-wrap: wrap;
+  }
+  .vis-flow svg {
+    display: none;
+  }
+  .flow-mobile {
+    display: block;
+  }
+  .flow-mobile dl {
+    display: grid;
+    gap: 16px;
+    margin: 24px 0 0;
+  }
+  .flow-mobile dl > div {
+    padding-top: 12px;
+    border-top: 1px solid var(--rule);
+  }
+  .flow-mobile dt {
+    color: var(--ink-2);
+    font-size: 12px;
+  }
+  .flow-mobile dd {
+    margin: 4px 0 0;
+    font: 500 19px var(--mono);
+  }
+  .flow-mobile dl > div:last-child dd {
+    color: var(--accent);
   }
   .gauge {
     margin-top: 40px;
@@ -1375,6 +1540,25 @@ html:has(.story) body {
   .terms-card dl,
   .vis-facts {
     grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .ledger li > button {
+    grid-template-columns: 20px minmax(0, 1fr);
+    gap: 8px 10px;
+    padding: 14px;
+  }
+  .ledger li > button .stage-chip {
+    grid-column: 2;
+    justify-self: start;
+  }
+  .ledger-label {
+    overflow-wrap: anywhere;
+  }
+  .ledger-details {
+    padding-left: 44px;
+    padding-right: 14px;
   }
 }
 

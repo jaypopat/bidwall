@@ -18,21 +18,23 @@ a Solana lending app, and borrows USDC against it.
 
 If ONyc's price falls far enough, her loan becomes unsafe and Kamino
 **liquidates** it: it takes some of her ONyc and sells it to repay the lender.
-Today that sale goes to a DEX. That works for small amounts, but selling $5M of
-ONyc at once would lose 43% of its value. Lenders know this, so they limit how
-much anyone can borrow against tokens like ONyc.
+One exit is a DEX. Our 12 October Jupiter snapshot quoted a $5M ONyc sale
+43% below oracle value. That route can consume a liquidation's entire margin;
+other routes, including OnRe's own liquidity engine, may offer better execution.
 
 Bidwall gives that sale a buyer who is already waiting. A credit fund locks
-$5,000 in advance with a promise: _"I'll buy up to 5,000 ONyc at $1.00."_ When
+$4,700 in advance with a promise: _"I'll buy up to 5,000 ONyc at $0.94."_ When
 Alice's loan is liquidated, in one transaction:
 
-- $1,078.79 comes out of the fund's locked money
+- $1,014.07 comes out of the fund's locked money
 - $1,000.00 repays the lender
-- $78.79 goes back to Alice
+- $14.07 goes back to Alice
 - the fund receives 1,078.79 ONyc
 
-No DEX is involved. The fund is happy to do this because it can redeem ONyc with
-the issuer at full value later, so it's buying at a discount.
+No DEX is involved. The bid is below the test's $0.95 oracle price. A provider
+with redemption access could seek to earn the discount, while taking credit,
+price and redemption-delay risk. These are demonstration terms, not a quote
+from an independent fund.
 
 ## The problem
 
@@ -48,18 +50,17 @@ loan goes bad (a liquidation), and much of this collateral can't be sold at size
 | FWDI (Superstate)       |     $22.7M |         **no route at all** |
 | PRIME, syrupUSDC, PST   |          — |     ≤ −0.2% (issuer-funded) |
 
-The tokens that sell cleanly are the ones whose issuers pay for the exit. OnRe
-just did exactly that: on 24 September 2026 it launched a liquidity engine funded
-with **~15% of its own underwriting capital**, because "lenders who accept ONyc as
-collateral need to be able to sell it when a position is liquidated."
-
-Every issuer that wants its token to be good collateral faces the same bill.
+These are quoted snapshots, not executed trades or proof of bad debt. OnRe
+already offers another route: its [liquidity engine](https://www.onre.finance/blog/introducing-onres-liquidity-engine-powered-by-titan)
+allocates **~15% of its underwriting capital** to ONyc liquidity, with dynamically
+priced quotes routed through Titan. Bidwall explores sourcing committed capacity
+from outside providers instead of requiring the issuer to fund all of it.
 
 ## The solution
 
 Bidwall turns that exit into a product someone else can supply. A provider (a
 credit fund or market maker) locks USDC in a bid: _"I will buy up to 5,000 ONyc at
-$1.00 until Friday."_ The funds can't be withdrawn early, so lenders and risk teams
+$0.94 until Friday."_ The funds can't be withdrawn early, so lenders and risk teams
 can count on them.
 
 ```mermaid
@@ -71,12 +72,10 @@ flowchart LR
     B -- "collateral" --> P
 ```
 
-**Why this works for credit and not for stocks.** A fixed-price bid on a volatile
-stock is a free option for whoever hits it, so nobody sensible posts one. Credit
-tokens track a slow-moving redemption value (NAV), so "NAV minus a small
-discount" is a natural standing price. A provider that can redeem with the issuer
-buys at a discount during a liquidation and exits at NAV. The issuer rents the capacity instead of
-locking its own balance sheet.
+**Why focus on credit.** A slower-moving redemption value can make standing bids
+easier to price. A provider with redemption access can seek a discount, but still
+takes credit risk and locks capital until expiry. Whether issuers will pay for
+this capacity and providers will supply it at useful terms remains unvalidated.
 
 ## How a settlement works
 
@@ -104,24 +103,25 @@ sequenceDiagram
 A real looped ONyc loan at 66% LTV, from mainnet state:
 
 1. Kamino **refuses** to liquidate it: it's healthy (65.4% LTV).
-2. We lower ONyc's oracle price on the fork to $0.95, Kamino's floor.
-3. Bidwall settles the liquidation in one transaction:
+2. In the offline replay, we lower ONyc's oracle price to $0.95, Kamino's floor.
+3. A $0.94 bid settles part of the loan in one transaction:
 
 | Leg                                |                 Amount |
 | ---------------------------------- | ---------------------: |
-| Paid from the bid escrow           |          1,078.79 USDC |
+| Paid from the bid escrow           |          1,014.07 USDC |
 | → debt repaid to the Kamino lender |          1,000.00 USDC |
-| → surplus paid to the borrower     |             78.79 USDC |
-| ONyc delivered to the provider     | 1,078.79 ONyc at $1.00 |
+| → surplus paid to the borrower     |             14.07 USDC |
+| ONyc delivered to the provider     | 1,078.79 ONyc at $0.94 |
 
-No DEX was involved. The same flow also runs for NVDAx (tokenized Nvidia).
+No DEX was involved. This proves a $1,000 repayment, not a $5M liquidation or
+committed capacity at that scale. The same flow also runs for NVDAx (tokenized Nvidia).
 
 ## What's built
 
 - **Anchor program**: funded bids with partial fills, expiry, refunds and
   exhaustion; settlement into Kamino Lending v2 for ONyc/USDC and NVDAx/USDC.
 - **Offline replays** of both liquidations against the deployed Kamino binaries.
-  44 Rust tests and 6 client tests, no network needed.
+  45 Rust tests and 6 client tests, no network needed.
 - **Web console** that runs the whole lifecycle: fund, blocked early withdrawal,
   blocked healthy-loan liquidation, settlement, exhaustion, expiry.
 - **Risk research**: every xStock loan on Kamino and Jupiter Lend measured against
@@ -135,7 +135,7 @@ Needs the [toolchain](docs/TOOLCHAIN.md), Surfpool 1.3.0, Node.js and pnpm 12.5.
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
-npm run anchor-test   # program build + 44 tests, including both Kamino replays
+npm run anchor-test   # program build + 45 tests, including both Kamino replays
 npm run dev:demo      # console at http://127.0.0.1:3000
 ```
 

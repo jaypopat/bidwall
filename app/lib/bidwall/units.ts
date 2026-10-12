@@ -16,7 +16,7 @@ export function parseAtoms(value: string, decimals: number): bigint {
   if (fraction.length > decimals)
     throw new Error(`At most ${decimals} decimal places are allowed`);
   return assertU64(
-    BigInt(whole) * 10n ** BigInt(decimals) +
+    BigInt(whole!) * 10n ** BigInt(decimals) +
       BigInt(fraction.padEnd(decimals, "0") || "0")
   );
 }

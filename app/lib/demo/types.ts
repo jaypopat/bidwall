@@ -44,7 +44,6 @@ export type DemoReceipt = {
     uncoveredRepayUsdcAtoms: string;
     status: "exhausted-and-rejected-in-simulation";
   };
-  comparison?: DemoQuote;
   settlement?: {
     bid: string;
     obligation: string;
@@ -61,25 +60,6 @@ export type DemoReceipt = {
     status: string;
   };
   error?: string;
-};
-
-export type DemoQuote = {
-  status: "ok" | "no-route" | "error";
-  observedAt: string;
-  inputMint: string;
-  outputMint: string;
-  inputDecimals: number;
-  outputDecimals: 6;
-  inAmountRaw: string;
-  slippageBps: number;
-  outAmountRaw?: string;
-  minOutAmountRaw?: string;
-  contextSlot?: number;
-  routeLabels?: string[];
-  priceImpactPct?: string;
-  referencePriceUsd?: string;
-  rawSha256: string;
-  rawPath: string;
 };
 
 export type DemoResponse = {

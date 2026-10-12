@@ -4,8 +4,7 @@ The demo runs the complete commitment lifecycle against the captured real Kamino
 program without an upstream RPC connection, for either supported pair: OnRe
 ONyc/USDC (tokenized reinsurance credit) or xStocks NVDAx/USDC. Per-pair terms live
 in `app/lib/bidwall/demo-terms.ts` and are shared by the runner, console server and
-page; a receipt validates only against the terms of the pair it records. The same typed client can be
-used by the future console. No contract behavior was changed in this milestone.
+page; a receipt validates only against the terms of the pair it records. The same typed client drives the console. No contract behavior was changed in this milestone.
 
 ## Run it
 
@@ -29,9 +28,10 @@ simulation rejections and the local oracle override.
 
 Commitment start and expiry come from the funded bid account and use the historical
 local scenario clock. After the main lifecycle, the runner performs a separate
-exact-capacity replay. **Get mainnet quote** requests an optional read-only Jupiter
-sell quote for the exact quantity delivered in the passed receipt. It is not part
-of the offline execution and never builds or sends a swap.
+exact-capacity replay. **Check $5M on Jupiter now** requests an optional read-only
+quote for a fixed sale size ($100k, $1M or $5M). It is separate from the offline
+execution and never builds or sends a swap. The large-sale comparison is an
+illustration; the actual replay repays $1,000 of debt from a 4,700 USDC bid.
 
 `npm run` executes scripts only; dependency installation uses pnpm and its committed
 lockfile. The obsolete starter Bun lockfile was removed. The optional resolver
@@ -53,8 +53,8 @@ installation and an uncached Rust build can still require network access.
 1. Verify the committed fixture and deployed-program hashes against its manifest.
 2. Seed the captured lender state and programs into the local runtime; load the
    freshly built Bidwall program. Seed local SOL and provider USDC.
-3. Create a market and create/fund/activate a bid. ONyc: 5,000 USDC for up to
-   5,000 ONyc at 1.00 USDC each. NVDAx: 1,500 USDC for up to `1,000,000,000` raw
+3. Create a market and create/fund/activate a bid. ONyc: 4,700 USDC for up to
+   5,000 ONyc at 0.94 USDC each. NVDAx: 1,500 USDC for up to `1,000,000,000` raw
    NVDAx atoms at 150 USDC per `100,000,000` raw atoms.
 4. Create the liquidator, provider and borrower destination token accounts using
    normal associated-token instructions. Create and extend a real lookup table.
@@ -69,7 +69,7 @@ installation and an uncached Rust build can still require network access.
    provider credit, empty escrow and the Withdrawn state.
 9. Restore captured lender state and scenario time for a clearly labelled,
    independent capacity case. Create/fund/activate a new bid for exactly the
-   measured delivery (1,078.793553 USDC for ONyc, 594.633549 USDC for NVDAx). Settle through
+   measured delivery (1,014.065940 USDC for ONyc, 594.633549 USDC for NVDAx). Settle through
    real Kamino; assert Exhausted state, zero escrow and zero remaining quantity.
 10. Verify that the client refuses another attempt, and that simulation rejects
     the previously prepared instructions with the exhausted-bid error. No failed
@@ -81,10 +81,10 @@ Verified runs produced these money flows:
 | Result                                 |            ONyc/USDC |                  NVDAx/USDC |
 | -------------------------------------- | -------------------: | --------------------------: |
 | Provider receives                      | 1,078.793553683 ONyc | 396,422,366 raw NVDAx atoms |
-| Bid consideration                      |    1,078.793553 USDC |             594.633549 USDC |
+| Bid consideration                      |    1,014.065940 USDC |             594.633549 USDC |
 | Debt repayment                         |    1,000.000000 USDC |             566.377120 USDC |
-| Borrower surplus                       |       78.793553 USDC |              28.256429 USDC |
-| Remaining funds subsequently withdrawn |    3,921.206447 USDC |             905.366451 USDC |
+| Borrower surplus                       |       14.065940 USDC |              28.256429 USDC |
+| Remaining funds subsequently withdrawn |    3,685.934060 USDC |             905.366451 USDC |
 
 These are local replay results. Raw NVDAx units are not automatically equivalent to
 UI-scaled share quantities. The recorded milestone-3 transaction has slightly different
