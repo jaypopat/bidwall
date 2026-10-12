@@ -19,19 +19,46 @@ fn pk(s: &str) -> Pubkey {
 fn bytes(v: &Value) -> Vec<u8> {
     STANDARD.decode(v.as_str().unwrap()).unwrap()
 }
-const NVDAX_FIXTURE: &[u8] = include_bytes!("../../fixtures/kamino.json.gz");
-const ONYC_FIXTURE: &[u8] = include_bytes!("../../fixtures/kamino-onyc.json.gz");
+/// One captured liquidation of a supported reserve pair, plus the facts tests need.
+struct Spec {
+    name: &'static str,
+    fixture: &'static [u8],
+    lending_market: &'static str,
+    collateral_mint: &'static str,
+    /// Raw collateral atoms per whole token: bid prices are USDC atoms per `scale`.
+    scale: u64,
+    /// Scope spot and TWAP entries for the collateral in the shared feed.
+    scope_indices: [usize; 2],
+    /// A price at which the captured loan is healthy: mantissa × 10^(exp − shift).
+    healthy_price: (u64, u32),
+}
+const SCOPE_FEED: &str = "3t4JZcueEzTbVP6kLxXrL3VpWx45jDer4eqysweBchNH";
+const NVDAX: Spec = Spec {
+    name: "NVDAx",
+    fixture: include_bytes!("../../fixtures/kamino.json.gz"),
+    lending_market: "5wJeMrUYECGq41fxRESKALVcHnNX26TAWy4W98yULsua",
+    collateral_mint: "Xsc9qvGR1efVDFGLrVsmkzv3qi45LTBjeUKSPmx9qEh",
+    scale: 100_000_000,
+    scope_indices: [332, 269],
+    healthy_price: (225, 0),
+};
+const ONYC: Spec = Spec {
+    name: "ONyc",
+    fixture: include_bytes!("../../fixtures/kamino-onyc.json.gz"),
+    lending_market: "47tfyEG9SsdEnUm9cw5kY9BXngQGqu3LBoop9j5uTAv8",
+    collateral_mint: "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5",
+    scale: 1_000_000_000,
+    scope_indices: [350, 478],
+    healthy_price: (115, 2),
+};
+const SPECS: [&Spec; 2] = [&NVDAX, &ONYC];
 
 impl Fork {
-    fn new() -> Self {
-        Self::load(NVDAX_FIXTURE)
-    }
-    fn onyc() -> Self {
-        Self::load(ONYC_FIXTURE)
-    }
-    fn load(fixture: &[u8]) -> Self {
+    fn new(spec: &Spec) -> Self {
         let mut json = String::new();
-        GzDecoder::new(fixture).read_to_string(&mut json).unwrap();
+        GzDecoder::new(spec.fixture)
+            .read_to_string(&mut json)
+            .unwrap();
         let v: Value = serde_json::from_str(&json).unwrap();
         let mut svm = LiteSVM::new();
         let mut tracked = Vec::new();
@@ -154,276 +181,326 @@ impl Fork {
 }
 #[test]
 fn real_kamino_pays_debt_delivers_collateral_and_borrower_surplus() {
-    let mut f = Fork::new();
-    let before = f.bid();
-    let escrow = f.token(3);
-    let repay = f.token(12);
-    let provider = f.token(10);
-    let borrower = f.token(11);
-    f.send().unwrap();
-    let after = f.bid();
-    let delivered = f.token(10) - provider;
-    let spent = f.token(12) - repay;
-    assert!(spent > 0 && delivered > 0);
-    let proceeds = consideration(delivered, before.price, 100_000_000).unwrap();
-    assert!(proceeds > spent);
-    assert_eq!(escrow - f.token(3), proceeds);
-    assert_eq!(f.token(11) - borrower, proceeds - spent);
-    assert_eq!(
-        after.remaining_quantity,
-        before.remaining_quantity - delivered
-    );
-    assert_eq!(after.remaining_funds, before.remaining_funds - proceeds);
-    for index in [7, 8, 9] {
-        assert_eq!(f.token(index), 0);
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        let before = f.bid();
+        let escrow = f.token(3);
+        let repay = f.token(12);
+        let provider = f.token(10);
+        let borrower = f.token(11);
+        f.send().unwrap();
+        let after = f.bid();
+        let delivered = f.token(10) - provider;
+        let spent = f.token(12) - repay;
+        assert!(spent > 0 && delivered > 0, "{}", spec.name);
+        let proceeds = consideration(delivered, before.price, spec.scale).unwrap();
+        assert!(proceeds > spent, "{}", spec.name);
+        assert_eq!(escrow - f.token(3), proceeds);
+        assert_eq!(f.token(11) - borrower, proceeds - spent);
+        assert_eq!(
+            after.remaining_quantity,
+            before.remaining_quantity - delivered
+        );
+        assert_eq!(after.remaining_funds, before.remaining_funds - proceeds);
+        for index in [7, 8, 9] {
+            assert_eq!(f.token(index), 0);
+        }
+        f.rejects(6004); // Newly signed replay with fresh blockhash also fails.
+        f.arg(0, after.remaining_funds);
+        f.arg(2, after.remaining_quantity);
+        f.rejects(6004); // Correcting bid capacity cannot replay the old loan quote.
+        let loan = f.svm.get_account(&f.key(17)).unwrap();
+        f.arg(
+            3,
+            u64::from_le_bytes(loan.data[128..136].try_into().unwrap()),
+        );
+        f.send().unwrap(); // A genuinely fresh partial-liquidation quote is allowed.
     }
-    f.rejects(6004); // Newly signed replay with fresh blockhash also fails.
-    f.arg(0, after.remaining_funds);
-    f.arg(2, after.remaining_quantity);
-    f.rejects(6004); // Correcting bid capacity cannot replay the old loan quote.
-    let loan = f.svm.get_account(&f.key(17)).unwrap();
-    f.arg(
-        3,
-        u64::from_le_bytes(loan.data[128..136].try_into().unwrap()),
-    );
-    f.send().unwrap(); // A genuinely fresh partial-liquidation quote is allowed.
-}
-/// OnRe's ONyc reserve: classic SPL collateral, 9 decimals, a real looped loan at
-/// the 66% max LTV, liquidated after the fork's Scope NAV is stressed to 0.95.
-#[test]
-fn real_kamino_liquidates_onyc_into_a_fixed_price_bid() {
-    let mut f = Fork::onyc();
-    let before = f.bid();
-    let escrow = f.token(3);
-    let repay = f.token(12);
-    let provider = f.token(10);
-    let borrower = f.token(11);
-    f.send().unwrap();
-    let after = f.bid();
-    let delivered = f.token(10) - provider;
-    let spent = f.token(12) - repay;
-    assert!(spent > 0 && delivered > 0);
-    let proceeds = consideration(delivered, before.price, 1_000_000_000).unwrap();
-    assert!(proceeds > spent);
-    assert_eq!(escrow - f.token(3), proceeds);
-    assert_eq!(f.token(11) - borrower, proceeds - spent);
-    assert_eq!(
-        after.remaining_quantity,
-        before.remaining_quantity - delivered
-    );
-    assert_eq!(after.remaining_funds, before.remaining_funds - proceeds);
-    for index in [7, 8, 9] {
-        assert_eq!(f.token(index), 0);
-    }
-    f.rejects(6004); // The same quote cannot be replayed.
 }
 #[test]
-fn onyc_settlement_rejects_the_other_pairs_reserve() {
-    let mut f = Fork::onyc();
-    // Swap the collateral reserve for the USDC reserve: the pair table must reject it.
-    f.instructions.last_mut().unwrap().accounts[20].pubkey = f.key(23);
-    f.rejects(6000);
-}
-#[test]
-fn kamino_unauthorized_keeper() {
-    let mut f = Fork::new();
-    f.edit(1, |a| {
-        a.data[40..72].copy_from_slice(Pubkey::new_unique().as_ref())
-    });
-    f.rejects(2001);
-}
-#[test]
-fn kamino_program_substitution() {
-    let mut f = Fork::new();
-    f.instructions.last_mut().unwrap().accounts[13].pubkey = token::ID;
-    f.rejects(3008);
-}
-#[test]
-fn kamino_wrong_market_and_reserves() {
-    for index in [18, 20, 23] {
-        let mut f = Fork::new();
-        f.instructions.last_mut().unwrap().accounts[index].pubkey = f.key(if index == 18 {
-            20
-        } else if index == 20 {
-            23
-        } else {
-            20
+fn kamino_market_registered_for_another_pair_is_rejected() {
+    for (spec, other) in [(&NVDAX, &ONYC), (&ONYC, &NVDAX)] {
+        let mut f = Fork::new(spec);
+        // Market layout: discriminator, authority, keeper, lender_program, lender_market.
+        f.edit(1, |a| {
+            a.data[104..136].copy_from_slice(pk(other.lending_market).as_ref())
         });
         f.rejects(6000);
     }
 }
 #[test]
-fn kamino_wrong_mints_and_recipients() {
-    for index in [5, 6, 10, 11, 12] {
-        let mut f = Fork::new();
-        if index == 5 || index == 6 {
-            f.instructions.last_mut().unwrap().accounts[index].pubkey =
-                f.key(if index == 5 { 6 } else { 5 });
+fn kamino_registration_follows_the_pair_table() {
+    use anchor_spl::token_2022;
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        let usdc = pk("EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v");
+        let collateral = pk(spec.collateral_mint);
+        let program = f.svm.get_account(&collateral).unwrap().owner;
+        let wrong_program = if program == token::ID {
+            token_2022::ID
         } else {
-            f.edit(index, |a| {
-                a.data[..32].copy_from_slice(Pubkey::new_unique().as_ref())
-            });
+            token::ID
+        };
+        for (mint, token_program, ok) in [
+            (usdc, token::ID, false),           // not a supported collateral mint
+            (collateral, wrong_program, false), // mint under the wrong token program
+            (collateral, program, true),
+        ] {
+            let market = Keypair::new();
+            let keeper = f.keeper.insecure_clone();
+            let result = send(
+                &mut f.svm,
+                &keeper,
+                &[ix(
+                    crate::accounts::CreateKaminoMarket {
+                        authority: keeper.pubkey(),
+                        market: market.pubkey(),
+                        usdc_mint: usdc,
+                        collateral_mint: mint,
+                        collateral_token_program: token_program,
+                        system_program: anchor_lang::system_program::ID,
+                    },
+                    crate::instruction::CreateKaminoMarket {
+                        keeper: keeper.pubkey(),
+                    },
+                )],
+                &[&market],
+            );
+            assert_eq!(result.is_ok(), ok, "{} {mint} {result:?}", spec.name);
+            if ok {
+                let m: Market = read(&f.svm, market.pubkey());
+                assert_eq!(m.lender_market, pk(spec.lending_market));
+                assert_eq!(m.collateral_mint, collateral);
+                assert_eq!(m.scale, spec.scale);
+            }
         }
-        f.rejects_any();
+    }
+}
+#[test]
+fn kamino_unauthorized_keeper() {
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(1, |a| {
+            a.data[40..72].copy_from_slice(Pubkey::new_unique().as_ref())
+        });
+        f.rejects(2001);
+    }
+}
+#[test]
+fn kamino_program_substitution() {
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.instructions.last_mut().unwrap().accounts[13].pubkey = token::ID;
+        f.rejects(3008);
+    }
+}
+#[test]
+fn kamino_wrong_market_and_reserves() {
+    // 18: lending market, 20: USDC reserve, 23: collateral reserve.
+    for spec in SPECS {
+        for (index, substitute) in [(18, 20), (20, 23), (23, 20)] {
+            let mut f = Fork::new(spec);
+            f.instructions.last_mut().unwrap().accounts[index].pubkey = f.key(substitute);
+            f.rejects(6000);
+        }
+    }
+}
+#[test]
+fn kamino_wrong_mints_and_recipients() {
+    for spec in SPECS {
+        for index in [5, 6, 10, 11, 12] {
+            let mut f = Fork::new(spec);
+            if index == 5 || index == 6 {
+                f.instructions.last_mut().unwrap().accounts[index].pubkey =
+                    f.key(if index == 5 { 6 } else { 5 });
+            } else {
+                f.edit(index, |a| {
+                    a.data[..32].copy_from_slice(Pubkey::new_unique().as_ref())
+                });
+            }
+            f.rejects_any();
+        }
     }
 }
 #[test]
 fn kamino_rejects_stale_quote_and_budget() {
-    for (arg, value, code) in [
-        (0, u64::MAX, 6003),
-        (1, 0, 6003),
-        (2, 1, 6004),
-        (3, 1, 6004),
-    ] {
-        let mut f = Fork::new();
-        f.arg(arg, value);
-        f.rejects(code);
+    for spec in SPECS {
+        for (arg, value, code) in [
+            (0, u64::MAX, 6003),
+            (1, 0, 6003),
+            (2, 1, 6004),
+            (3, 1, 6004),
+        ] {
+            let mut f = Fork::new(spec);
+            f.arg(arg, value);
+            f.rejects(code);
+        }
     }
+}
+fn lender_succeeded(e: &FailedTransactionMetadata) -> bool {
+    e.meta
+        .logs
+        .iter()
+        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success")
 }
 #[test]
 fn kamino_overfill_rolls_back_after_actual_lender_cpi() {
-    let mut f = Fork::new();
-    f.edit(2, |a| a.data[128..136].copy_from_slice(&1u64.to_le_bytes()));
-    f.arg(2, 1);
-    let e = f.rejects(6003);
-    assert!(e
-        .meta
-        .logs
-        .iter()
-        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(2, |a| a.data[128..136].copy_from_slice(&1u64.to_le_bytes()));
+        f.arg(2, 1);
+        assert!(lender_succeeded(&f.rejects(6003)), "{}", spec.name);
+    }
 }
 #[test]
 fn kamino_insufficient_fixed_price_rolls_back() {
-    let mut f = Fork::new();
-    f.edit(2, |a| a.data[112..120].copy_from_slice(&1u64.to_le_bytes()));
-    f.rejects(6003);
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(2, |a| a.data[112..120].copy_from_slice(&1u64.to_le_bytes()));
+        f.rejects(6003);
+    }
 }
 #[test]
 fn kamino_frozen_delivery_rolls_back_lender_and_all_payments() {
-    let mut f = Fork::new();
-    f.edit(10, |a| a.data[108] = 2);
-    let e = f.rejects(17);
-    assert!(e
-        .meta
-        .logs
-        .iter()
-        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(10, |a| a.data[108] = 2);
+        assert!(lender_succeeded(&f.rejects(17)), "{}", spec.name);
+    }
 }
 #[test]
 fn kamino_wrong_borrower_owner_rejected() {
-    let mut f = Fork::new();
-    f.edit(11, |a| {
-        a.data[32..64].copy_from_slice(Pubkey::new_unique().as_ref())
-    });
-    f.rejects(6000);
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(11, |a| {
+            a.data[32..64].copy_from_slice(Pubkey::new_unique().as_ref())
+        });
+        f.rejects(6000);
+    }
 }
 #[test]
 fn kamino_expiry_and_inactive_bid() {
-    for (offset, value, code) in [(152, u64::MAX, 6002), (160, 1, 6001)] {
-        let mut f = Fork::new();
-        f.edit(2, |a| {
-            if offset == 160 {
-                a.data[offset] = value as u8
-            } else {
-                a.data[offset..offset + 8].copy_from_slice(&value.to_le_bytes())
-            }
-        });
-        f.rejects(code);
+    for spec in SPECS {
+        for (offset, value, code) in [(152, u64::MAX, 6002), (160, 1, 6001)] {
+            let mut f = Fork::new(spec);
+            f.edit(2, |a| {
+                if offset == 160 {
+                    a.data[offset] = value as u8
+                } else {
+                    a.data[offset..offset + 8].copy_from_slice(&value.to_le_bytes())
+                }
+            });
+            f.rejects(code);
+        }
     }
 }
 
 #[test]
 fn kamino_native_healthy_loan_and_stale_oracle() {
-    for healthy in [true, false] {
-        let mut f = Fork::new();
-        let key = pk("3t4JZcueEzTbVP6kLxXrL3VpWx45jDer4eqysweBchNH");
-        let mut a = f.svm.get_account(&key).unwrap();
-        for index in [332, 269] {
-            let offset = 40 + index * 56;
-            if healthy {
-                let exp = u64::from_le_bytes(a.data[offset + 8..offset + 16].try_into().unwrap());
-                a.data[offset..offset + 8]
-                    .copy_from_slice(&(225 * 10u64.pow(exp as u32)).to_le_bytes());
-            } else {
-                a.data[offset + 24..offset + 32].fill(0);
+    for spec in SPECS {
+        for healthy in [true, false] {
+            let mut f = Fork::new(spec);
+            let key = pk(SCOPE_FEED);
+            let mut a = f.svm.get_account(&key).unwrap();
+            for index in spec.scope_indices {
+                let offset = 40 + index * 56;
+                if healthy {
+                    let exp =
+                        u64::from_le_bytes(a.data[offset + 8..offset + 16].try_into().unwrap());
+                    let (mantissa, shift) = spec.healthy_price;
+                    a.data[offset..offset + 8]
+                        .copy_from_slice(&(mantissa * 10u64.pow(exp as u32 - shift)).to_le_bytes());
+                } else {
+                    a.data[offset + 24..offset + 32].fill(0);
+                }
             }
+            f.svm.set_account(key, a).unwrap();
+            let e = f.rejects_any();
+            assert!(
+                e.meta.logs.iter().any(|l| l.contains(if healthy {
+                    "ObligationHealthy"
+                } else {
+                    "PriceTooOld"
+                })),
+                "{} {e:?}",
+                spec.name
+            );
         }
-        f.svm.set_account(key, a).unwrap();
+    }
+}
+#[test]
+fn kamino_native_refresh_required() {
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.instructions.drain(..3);
         let e = f.rejects_any();
+        assert!(e.meta.logs.iter().any(|l| l.contains("Stale")), "{e:?}");
+    }
+}
+#[test]
+fn kamino_minimum_delivery_enforced_by_lender() {
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.arg(1, u64::MAX);
+        let e = f.rejects(6066);
         assert!(
-            e.meta.logs.iter().any(|l| l.contains(if healthy {
-                "ObligationHealthy"
-            } else {
-                "PriceTooOld"
-            })),
+            e.meta
+                .logs
+                .iter()
+                .any(|l| l.contains("LiquidationRewardTooSmall")),
             "{e:?}"
         );
     }
 }
 #[test]
-fn kamino_native_refresh_required() {
-    let mut f = Fork::new();
-    f.instructions.drain(..3);
-    let e = f.rejects_any();
-    assert!(e.meta.logs.iter().any(|l| l.contains("Stale")), "{e:?}");
-}
-#[test]
-fn kamino_minimum_delivery_enforced_by_lender() {
-    let mut f = Fork::new();
-    f.arg(1, u64::MAX);
-    let e = f.rejects(6066);
-    assert!(
-        e.meta
-            .logs
-            .iter()
-            .any(|l| l.contains("LiquidationRewardTooSmall")),
-        "{e:?}"
-    );
-}
-#[test]
 fn kamino_obligation_owner_discriminator_and_length_are_checked() {
-    for change in 0..3 {
-        let mut f = Fork::new();
-        f.edit(17, |a| match change {
-            0 => a.owner = ID,
-            1 => a.data[0] ^= 1,
-            _ => a.data.truncate(2000),
-        });
-        // Native refresh may reject first; exercise the adapter parser directly.
-        f.instructions.drain(..3);
-        f.rejects(6000);
+    for spec in SPECS {
+        for change in 0..3 {
+            let mut f = Fork::new(spec);
+            f.edit(17, |a| match change {
+                0 => a.owner = ID,
+                1 => a.data[0] ^= 1,
+                _ => a.data.truncate(2000),
+            });
+            // Native refresh may reject first; exercise the adapter parser directly.
+            f.instructions.drain(..3);
+            f.rejects(6000);
+        }
     }
 }
 #[test]
 fn kamino_exact_capacity_exhaustion() {
-    let mut quote = Fork::new();
-    quote.send().unwrap();
-    let delivered = quote.token(10);
-    let mut f = Fork::new();
-    let budget = consideration(delivered, f.bid().price, 100_000_000).unwrap();
-    f.edit(2, |a| {
-        a.data[120..128].copy_from_slice(&delivered.to_le_bytes());
-        a.data[128..136].copy_from_slice(&delivered.to_le_bytes());
-        a.data[136..144].copy_from_slice(&budget.to_le_bytes());
-    });
-    f.edit(3, |a| a.data[64..72].copy_from_slice(&budget.to_le_bytes()));
-    f.arg(0, budget);
-    f.arg(2, delivered);
-    f.send().unwrap();
-    assert_eq!(f.bid().state, BidState::Exhausted);
-    assert_eq!(f.bid().remaining_quantity, 0);
-    assert_eq!(f.bid().remaining_funds, 0);
-    assert_eq!(f.token(3), 0);
-    f.rejects(6001);
+    for spec in SPECS {
+        // The keeper must size repayment so seized collateral fits the bid: reuse the
+        // repayment that delivered exactly `delivered` in an identical quote run.
+        let mut quote = Fork::new(spec);
+        let repay_before = quote.token(12);
+        quote.send().unwrap();
+        let delivered = quote.token(10);
+        let repay = quote.token(12) - repay_before;
+        let mut f = Fork::new(spec);
+        let budget = consideration(delivered, f.bid().price, spec.scale).unwrap();
+        f.edit(2, |a| {
+            a.data[120..128].copy_from_slice(&delivered.to_le_bytes());
+            a.data[128..136].copy_from_slice(&delivered.to_le_bytes());
+            a.data[136..144].copy_from_slice(&budget.to_le_bytes());
+        });
+        f.edit(3, |a| a.data[64..72].copy_from_slice(&budget.to_le_bytes()));
+        f.arg(0, repay);
+        f.arg(2, delivered);
+        f.send().unwrap();
+        assert_eq!(f.bid().state, BidState::Exhausted);
+        assert_eq!(f.bid().remaining_quantity, 0);
+        assert_eq!(f.bid().remaining_funds, 0);
+        assert_eq!(f.token(3), 0);
+        f.rejects(6001);
+    }
 }
 #[test]
 fn kamino_borrower_payment_failure_rolls_back_completed_liquidation() {
-    let mut f = Fork::new();
-    f.edit(11, |a| a.data[108] = 2);
-    let e = f.rejects(17);
-    assert!(e
-        .meta
-        .logs
-        .iter()
-        .any(|l| l == "Program KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD success"));
+    for spec in SPECS {
+        let mut f = Fork::new(spec);
+        f.edit(11, |a| a.data[108] = 2);
+        assert!(lender_succeeded(&f.rejects(17)), "{}", spec.name);
+    }
 }
