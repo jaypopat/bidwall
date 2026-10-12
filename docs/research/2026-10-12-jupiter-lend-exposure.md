@@ -1,6 +1,6 @@
 # Jupiter Lend xStock exposure, measured 12 October 2026
 
-Follow-up to the [resumed pivot review](2026-10-04-resumed-pivot-review.md).
+Follow-up to the [Kamino xStocks risk review](2026-10-04-kamino-xstocks-risk.md).
 Question: Kamino's xStocks market runs about 23% aggregate LTV and showed no
 single-name shortfall in 36 snapshots (4–12 Oct). Jupiter Lend advertises much
 higher thresholds. Does the aggressive lender carry the gap Bidwall would fill?
