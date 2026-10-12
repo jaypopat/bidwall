@@ -6,6 +6,8 @@ Credit funds post funded, fixed-price bids for RWA collateral. When a lender
 liquidates a loan, the bid buys the collateral inside the same transaction, so
 the lender is repaid without relying on DEX depth.
 
+[Explore the hosted demo](https://bidwall-omega.vercel.app) · [Reproduce locally](#run-it)
+
 > Hackathon prototype. Runs on a local mainnet fork and offline replays of real
 > Kamino state. Not deployed to mainnet.
 
