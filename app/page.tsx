@@ -237,7 +237,7 @@ export default function Home() {
 
   const receipt: DemoReceipt | null = data?.receipt ?? null;
   // Shown values follow the receipt's own pair; the selector picks the next run.
-  const selectedPair = nextPair ?? receipt?.pair.id ?? "nvdax";
+  const selectedPair = nextPair ?? receipt?.pair.id ?? "onyc";
   const demo = DEMO_TERMS[receipt?.pair.id ?? selectedPair];
   const { symbol, decimals } = demo.pair;
   const budget = demoBudget(demo);

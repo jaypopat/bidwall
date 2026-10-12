@@ -25,7 +25,7 @@ export async function POST(request: Request) {
     return Response.json({ error: "Local demo is disabled" }, { status: 403 });
   // Only a supported pair id may reach the runner's environment.
   const body = await request.json().catch(() => ({}));
-  const pair = (body?.pair ?? "nvdax") as DemoPair["id"];
+  const pair = (body?.pair ?? "onyc") as DemoPair["id"];
   if (!Object.hasOwn(DEMO_TERMS, pair))
     return Response.json({ error: "Unsupported demo pair" }, { status: 400 });
   if (!startDemo(pair))
