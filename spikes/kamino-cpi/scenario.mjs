@@ -18,12 +18,15 @@ import { OraclePrices } from "@kamino-finance/scope-sdk/dist/@codegen/scope/acco
 import { FARMS_PROGRAM_ADDRESS } from "@kamino-finance/farms-sdk";
 import { rpc, account } from "./rpc.mjs";
 import { fixtureManifest } from "../../scripts/kamino-fixture.mjs";
+import { PAIR } from "./pairs.mjs";
 const KLEND = "KLend2g3cP87fffoy8q1mQqGKjrxjC8boSyAYavgmjD",
   BIDWALL = "HQhMdM6YjEdrHzD6TGeDLrTCF491EiQntRRpA9Hs2g37";
-const MARKET = "5wJeMrUYECGq41fxRESKALVcHnNX26TAWy4W98yULsua",
-  NVDA = "7B66Az3tJhAo4bLkX8PzTixQ9ZGyHkkjxfVLhF26sP5q",
-  USDC = "97zoywd8mPZsGTg8q1wdD2Wgkdrs2tqusp1Qqcxbyj7E";
-const OBLIGATION = "H3PyTc8j5Xq4EmDh1vS7AbY73293evzXXsAbxkm1QUj";
+const MARKET = PAIR.market,
+  COLLATERAL = PAIR.collateralReserve,
+  USDC = PAIR.usdcReserve;
+const OBLIGATION = PAIR.obligation;
+// NVDAx keeps its original evidence names; other pairs get their own files.
+const suffix = PAIR.captureFixture ? "" : `-${PAIR.label.toLowerCase()}`;
 const TOKEN = "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
   ZERO = "11111111111111111111111111111111";
 const encode = kit.getAddressEncoder(),
@@ -38,8 +41,7 @@ const ata = (owner, mint, program) =>
   ]);
 mkdirSync(new URL("./evidence/", import.meta.url), { recursive: true });
 const evidence = {
-  label:
-    "Local mainnet fork. Real Kamino binary and obligation; locally funded liquidator and stressed Scope price.",
+  label: `Local mainnet fork (${PAIR.label}). Real Kamino binary and obligation; locally funded liquidator and stressed Scope price.`,
   observedAt: new Date().toISOString(),
   market: MARKET,
   obligation: OBLIGATION,
@@ -52,7 +54,7 @@ async function capture(key) {
   raw[key] = { ...a, data: a.data.toString("base64") };
   return a;
 }
-let reserveN = Reserve.decode((await capture(NVDA)).data),
+let reserveC = Reserve.decode((await capture(COLLATERAL)).data),
   reserveU = Reserve.decode((await capture(USDC)).data);
 // Pin mutually dependent lender accounts from ONE upstream RPC context. Lazy reads
 // across different slots can produce vault/reserve accounting mismatches.
@@ -64,13 +66,13 @@ const farmUser = await pda(FARMS_PROGRAM_ADDRESS, [
 const keys = [
   ...new Set([
     MARKET,
-    NVDA,
+    COLLATERAL,
     USDC,
     OBLIGATION,
     farmUser,
     reserveU.farmDebt,
-    reserveN.config.tokenInfo.scopeConfiguration.priceFeed,
-    ...[reserveN, reserveU].flatMap((r) => [
+    reserveC.config.tokenInfo.scopeConfiguration.priceFeed,
+    ...[reserveC, reserveU].flatMap((r) => [
       r.liquidity.mintPubkey,
       r.liquidity.supplyVault,
       r.liquidity.feeVault,
@@ -119,7 +121,7 @@ await rpc("surfnet_setAccount", [
   "SysvarC1ock11111111111111111111111111111111",
   { data: fixedClock.data.toString("hex") },
 ]);
-reserveN = Reserve.decode((await capture(NVDA)).data);
+reserveC = Reserve.decode((await capture(COLLATERAL)).data);
 reserveU = Reserve.decode((await capture(USDC)).data);
 const obligation = Obligation.decode((await capture(OBLIGATION)).data);
 assert.equal(obligation.lendingMarket, MARKET);
@@ -132,9 +134,9 @@ assert.equal(
   obligation.borrows.filter((x) => x.borrowReserve !== ZERO).length,
   1
 );
-assert.equal(obligation.deposits[0].depositReserve, NVDA);
+assert.equal(obligation.deposits[0].depositReserve, COLLATERAL);
 assert.equal(obligation.borrows[0].borrowReserve, USDC);
-assert.equal(reserveN.farmCollateral, ZERO);
+assert.equal(reserveC.farmCollateral, ZERO);
 const program = await capture(KLEND);
 assert.equal(program.executable, true);
 const pd = decode.decode(program.data.subarray(4, 36));
@@ -145,7 +147,7 @@ evidence.program = {
   sha256: createHash("sha256").update(programData.data).digest("hex"),
 };
 for (const mint of [
-  reserveN.liquidity.mintPubkey,
+  reserveC.liquidity.mintPubkey,
   reserveU.liquidity.mintPubkey,
 ]) {
   const a = await capture(mint);
@@ -211,17 +213,17 @@ function instruction(name, accounts, args = []) {
 }
 for (const [mint, program, amount] of [
   [reserveU.liquidity.mintPubkey, TOKEN, 0],
-  [reserveN.collateral.mintPubkey, TOKEN, 0],
-  [reserveN.liquidity.mintPubkey, reserveN.liquidity.tokenProgram, 0],
+  [reserveC.collateral.mintPubkey, TOKEN, 0],
+  [reserveC.liquidity.mintPubkey, reserveC.liquidity.tokenProgram, 0],
 ]) {
   await rpc("surfnet_setTokenAccount", [liquidator, mint, { amount }, program]);
 }
 const source = await ata(liquidator, reserveU.liquidity.mintPubkey, TOKEN),
-  ctoken = await ata(liquidator, reserveN.collateral.mintPubkey, TOKEN),
+  ctoken = await ata(liquidator, reserveC.collateral.mintPubkey, TOKEN),
   destination = await ata(
     liquidator,
-    reserveN.liquidity.mintPubkey,
-    reserveN.liquidity.tokenProgram
+    reserveC.liquidity.mintPubkey,
+    reserveC.liquidity.tokenProgram
   );
 const authority = await pda(KLEND, [Buffer.from("lma"), encode.encode(MARKET)]);
 const debtFarm = await pda(FARMS_PROGRAM_ADDRESS, [
@@ -230,7 +232,7 @@ const debtFarm = await pda(FARMS_PROGRAM_ADDRESS, [
   encode.encode(OBLIGATION),
 ]);
 await capture(debtFarm);
-const scope = reserveN.config.tokenInfo.scopeConfiguration.priceFeed;
+const scope = reserveC.config.tokenInfo.scopeConfiguration.priceFeed;
 assert.equal(scope, reserveU.config.tokenInfo.scopeConfiguration.priceFeed);
 const oracle = await capture(scope),
   prices = OraclePrices.layout.decode(oracle.data.subarray(8));
@@ -240,8 +242,8 @@ const slot = clock.data.readBigUInt64LE(0),
   timestamp = clock.data.readBigInt64LE(32);
 evidence.slot = slot.toString();
 evidence.timestamp = timestamp.toString();
-// Update only this fork's Scope timestamps, then stress NVDA spot/TWAP from the same feed.
-for (const index of [332, 269, 13, 456]) {
+// Update only this fork's Scope timestamps, then stress collateral spot/TWAP from the same feed.
+for (const index of PAIR.freshIndices) {
   const price = prices.prices[index];
   evidence.changes.push({
     account: scope,
@@ -256,17 +258,17 @@ for (const index of [332, 269, 13, 456]) {
   price.lastUpdatedSlot = new BN(slot.toString());
 }
 async function setPrice(stress) {
-  for (const index of [332, 269]) {
+  for (const index of PAIR.stressedIndices) {
     const original = evidence.changes.find((x) => x.index === index).before;
     prices.prices[index].price.value = stress
-      ? new BN(150).mul(new BN(10).pow(prices.prices[index].price.exp))
+      ? PAIR.stressPrice(prices.prices[index].price.exp)
       : new BN(original.value);
   }
   const data = Buffer.from(oracle.data);
   OraclePrices.layout.encode(prices, data, 8);
   await rpc("surfnet_setAccount", [scope, { data: data.toString("hex") }]);
 }
-const refresh = [USDC, NVDA].map((reserve) =>
+const refresh = [USDC, COLLATERAL].map((reserve) =>
   refreshReserve({
     reserve,
     lendingMarket: MARKET,
@@ -278,7 +280,7 @@ const refresh = [USDC, NVDA].map((reserve) =>
 );
 refresh.push(
   refreshObligation({ lendingMarket: MARKET, obligation: OBLIGATION }, [
-    { address: NVDA, role: 1 },
+    { address: COLLATERAL, role: 1 },
     { address: USDC, role: 1 },
   ])
 );
@@ -297,18 +299,18 @@ const l = liquidateObligationAndRedeemReserveCollateralV2(
       repayReserve: USDC,
       repayReserveLiquidityMint: reserveU.liquidity.mintPubkey,
       repayReserveLiquiditySupply: reserveU.liquidity.supplyVault,
-      withdrawReserve: NVDA,
-      withdrawReserveLiquidityMint: reserveN.liquidity.mintPubkey,
-      withdrawReserveCollateralMint: reserveN.collateral.mintPubkey,
-      withdrawReserveCollateralSupply: reserveN.collateral.supplyVault,
-      withdrawReserveLiquiditySupply: reserveN.liquidity.supplyVault,
-      withdrawReserveLiquidityFeeReceiver: reserveN.liquidity.feeVault,
+      withdrawReserve: COLLATERAL,
+      withdrawReserveLiquidityMint: reserveC.liquidity.mintPubkey,
+      withdrawReserveCollateralMint: reserveC.collateral.mintPubkey,
+      withdrawReserveCollateralSupply: reserveC.collateral.supplyVault,
+      withdrawReserveLiquiditySupply: reserveC.liquidity.supplyVault,
+      withdrawReserveLiquidityFeeReceiver: reserveC.liquidity.feeVault,
       userSourceLiquidity: source,
       userDestinationCollateral: ctoken,
       userDestinationLiquidity: destination,
       collateralTokenProgram: TOKEN,
       repayLiquidityTokenProgram: TOKEN,
-      withdrawLiquidityTokenProgram: reserveN.liquidity.tokenProgram,
+      withdrawLiquidityTokenProgram: reserveC.liquidity.tokenProgram,
       instructionSysvarAccount: "Sysvar1nstructions1111111111111111111111111",
     },
     collateralFarmsAccounts: {
@@ -321,10 +323,9 @@ const l = liquidateObligationAndRedeemReserveCollateralV2(
     },
     farmsProgram: FARMS_PROGRAM_ADDRESS,
   },
-  [{ address: NVDA, role: 1 }]
+  [{ address: COLLATERAL, role: 1 }]
 );
-const quantity = 1_000_000_000n,
-  price = 150_000_000n;
+const { quantity, price, scale } = PAIR;
 const providerUsdc = await ata(
   payer.address,
   reserveU.liquidity.mintPubkey,
@@ -332,8 +333,8 @@ const providerUsdc = await ata(
 );
 const providerCollateral = await ata(
   payer.address,
-  reserveN.liquidity.mintPubkey,
-  reserveN.liquidity.tokenProgram
+  reserveC.liquidity.mintPubkey,
+  reserveC.liquidity.tokenProgram
 );
 const borrowerUsdc = await ata(
   obligation.owner,
@@ -344,8 +345,8 @@ for (const [owner, mint, program, amount] of [
   [payer.address, reserveU.liquidity.mintPubkey, TOKEN, 10_000_000_000],
   [
     payer.address,
-    reserveN.liquidity.mintPubkey,
-    reserveN.liquidity.tokenProgram,
+    reserveC.liquidity.mintPubkey,
+    reserveC.liquidity.tokenProgram,
     0,
   ],
   [obligation.owner, reserveU.liquidity.mintPubkey, TOKEN, 0],
@@ -359,8 +360,8 @@ const base = {
   bid,
   escrow,
   usdc_mint: reserveU.liquidity.mintPubkey,
-  collateral_mint: reserveN.liquidity.mintPubkey,
-  collateral_token_program: reserveN.liquidity.tokenProgram,
+  collateral_mint: reserveC.liquidity.mintPubkey,
+  collateral_token_program: reserveC.liquidity.tokenProgram,
   token_program: TOKEN,
   system_program: ZERO,
   provider_usdc: providerUsdc,
@@ -389,7 +390,7 @@ function settlement(overrides = {}, args = {}) {
   return ix;
 }
 const settle = settlement();
-const lutAddress = "8ofreL6hKfEet1DnhHVGvCTnSdz4pg85PpbuCUHnEcKm";
+const lutAddress = PAIR.lookupTable;
 const lut = await capture(lutAddress),
   addresses = [];
 for (let i = 56; i < lut.data.length; i += 32)
@@ -428,7 +429,7 @@ async function transaction(label, instructions, expectedError = null) {
   ]);
   evidence.transactions.push({ label, simulation: simulated.value });
   writeFileSync(
-    new URL("./evidence/result.json", import.meta.url),
+    new URL(`./evidence/result${suffix}.json`, import.meta.url),
     JSON.stringify(evidence, null, 2)
   );
   console.log(
@@ -488,7 +489,7 @@ const beforeSource = (await account(escrow)).data.readBigUInt64LE(64),
   ).data.readBigUInt64LE(64),
   beforeBorrower = (await account(borrowerUsdc)).data.readBigUInt64LE(64);
 await transaction(
-  "stressed NVDA150 CPI liquidation",
+  `stressed ${PAIR.stressLabel} CPI liquidation`,
   [...refresh, settle],
   null
 );
@@ -503,36 +504,36 @@ const repaid =
   beforeRepay;
 const residual =
   (await account(borrowerUsdc)).data.readBigUInt64LE(64) - beforeBorrower;
-assert.equal(paid, (delivered * price) / 100_000_000n);
+assert.equal(paid, (delivered * price) / scale);
 assert.equal(paid, repaid + residual);
 assert(repaid > 0n && residual > 0n);
 const bidAfter = (await account(bid)).data;
 assert.equal(bidAfter.readBigUInt64LE(128), quantity - delivered);
-assert.equal(
-  bidAfter.readBigUInt64LE(136),
-  (quantity * price) / 100_000_000n - paid
-);
+assert.equal(bidAfter.readBigUInt64LE(136), (quantity * price) / scale - paid);
 for (const key of [source, ctoken, destination])
   assert.equal((await account(key)).data.readBigUInt64LE(64), 0n);
 evidence.deltas = {
   bidConsideration: paid.toString(),
   debtRepaid: repaid.toString(),
   borrowerSurplus: residual.toString(),
-  nvdaReceived: (afterDest - beforeDest).toString(),
+  collateralReceived: (afterDest - beforeDest).toString(),
   obligationAfter: Obligation.decode((await account(OBLIGATION)).data).toJSON(),
 };
 writeFileSync(
-  new URL("./evidence/result.json", import.meta.url),
+  new URL(`./evidence/result${suffix}.json`, import.meta.url),
   JSON.stringify(evidence, null, 2)
 );
 writeFileSync(
-  new URL("./evidence/observations.json", import.meta.url),
+  new URL(`./evidence/observations${suffix}.json`, import.meta.url),
   JSON.stringify(raw, null, 2)
 );
-console.log(evidence.deltas.bidConsideration, evidence.deltas.nvdaReceived);
+console.log(
+  evidence.deltas.bidConsideration,
+  evidence.deltas.collateralReceived
+);
 
 // Explicit opt-in refresh of the committed offline replay fixture.
-if (process.env.CAPTURE_FIXTURE === "1") {
+if (process.env.CAPTURE_FIXTURE === "1" && PAIR.captureFixture) {
   const signature = evidence.transactions.at(-1).signature;
   const snapshot = await rpc("surfnet_exportSnapshot", [
     { scope: { preTransaction: signature } },
@@ -541,7 +542,7 @@ if (process.env.CAPTURE_FIXTURE === "1") {
   for (const key of [
     KLEND,
     FARMS_PROGRAM_ADDRESS,
-    reserveN.liquidity.tokenProgram,
+    reserveC.liquidity.tokenProgram,
   ]) {
     const p = await account(key);
     assert(p.executable);
