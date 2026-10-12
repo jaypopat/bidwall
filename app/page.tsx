@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { MarketRisk } from "./components/market-risk";
+import { DEMO_TERMS, demoBudget } from "./lib/bidwall/demo-terms";
 import type {
+  DemoPair,
   DemoReceipt,
   DemoResponse,
   DemoStage,
@@ -38,7 +40,7 @@ const SCENARIO: {
     id: "stressed",
     title: "Stress locally",
     pending: "Apply a local Scope price override.",
-    complete: "Scope price changed from 225 to 150 locally.",
+    complete: "Scope price lowered locally.",
   },
   {
     id: "settled",
@@ -58,6 +60,18 @@ function usd(atoms?: string) {
   if (!atoms) return "—";
   const value = BigInt(atoms);
   return `${(value / 1_000_000n).toLocaleString("en-US")}.${(value % 1_000_000n).toString().padStart(6, "0")}`;
+}
+
+/** Raw atoms as a whole-token amount, trailing zeros trimmed. */
+function tokens(atoms: bigint | string | undefined, decimals: number) {
+  if (atoms === undefined) return "—";
+  const value = BigInt(atoms);
+  const scale = 10n ** BigInt(decimals);
+  const fraction = (value % scale)
+    .toString()
+    .padStart(decimals, "0")
+    .replace(/0+$/, "");
+  return `${(value / scale).toLocaleString("en-US")}${fraction ? `.${fraction}` : ""}`;
 }
 
 function integer(atoms?: string) {
@@ -154,6 +168,7 @@ export default function Home() {
   const [quoting, setQuoting] = useState(false);
   const [quoteError, setQuoteError] = useState<string>();
   const [nowMs, setNowMs] = useState<number | null>(null);
+  const [nextPair, setNextPair] = useState<DemoPair["id"]>();
 
   const refresh = useCallback(async () => {
     try {
@@ -185,7 +200,11 @@ export default function Home() {
   const run = async () => {
     setRequestError(undefined);
     try {
-      const response = await fetch("/api/demo", { method: "POST" });
+      const response = await fetch("/api/demo", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ pair: selectedPair }),
+      });
       if (!response.ok) {
         const body = await response.json().catch(() => ({}));
         throw new Error(
@@ -217,6 +236,11 @@ export default function Home() {
   };
 
   const receipt: DemoReceipt | null = data?.receipt ?? null;
+  // Shown values follow the receipt's own pair; the selector picks the next run.
+  const selectedPair = nextPair ?? receipt?.pair.id ?? "nvdax";
+  const demo = DEMO_TERMS[receipt?.pair.id ?? selectedPair];
+  const { symbol, decimals } = demo.pair;
+  const budget = demoBudget(demo);
   const completedStages = new Map(
     receipt?.stages.map((stage) => [stage.id, stage.mode])
   );
@@ -230,7 +254,7 @@ export default function Home() {
     steps.filter((step) => step.status === "rejected-in-simulation").length +
     (receipt?.capacityFailure ? 1 : 0);
   const usedPercent = Number(
-    (BigInt(settlement?.paidUsdcAtoms ?? "0") * 100n) / 1_500_000_000n
+    (BigInt(settlement?.paidUsdcAtoms ?? "0") * 100n) / budget
   );
   const status = data?.running
     ? "Running"
@@ -273,11 +297,11 @@ export default function Home() {
               Capital that <span>commits.</span>
             </h1>
             <p className="intro-copy">
-              A fully funded NVDAx bid, locked to one Kamino market. Run the
+              A fully funded {symbol} bid, locked to one Kamino market. Run the
               offline scenario and inspect every settlement leg.
             </p>
             <div className="intro-facts">
-              <span>NVDAx / USDC</span>
+              <span>{symbol} / USDC</span>
               <span>Kamino v2</span>
               <span>Fixed-price bid</span>
             </div>
@@ -288,6 +312,19 @@ export default function Home() {
               <span className="dither-baseline" />
               <span className="dither-caption">CAPITAL / RESERVED</span>
             </div>
+            <div className="pair-select" role="radiogroup" aria-label="Pair">
+              {Object.values(DEMO_TERMS).map(({ pair }) => (
+                <button
+                  key={pair.id}
+                  role="radio"
+                  aria-checked={selectedPair === pair.id}
+                  disabled={data?.running}
+                  onClick={() => setNextPair(pair.id)}
+                >
+                  {pair.symbol} / USDC
+                </button>
+              ))}
+            </div>
             <button
               className="run-button"
               disabled={loading || !data?.enabled || data.running}
@@ -296,7 +333,7 @@ export default function Home() {
               {data?.running
                 ? "Running scenario…"
                 : receipt
-                  ? "Run new scenario"
+                  ? `Run ${DEMO_TERMS[selectedPair].pair.symbol} scenario`
                   : "Run local scenario"}
               <span aria-hidden="true">↗</span>
             </button>
@@ -370,7 +407,13 @@ export default function Home() {
                     </span>
                   </div>
                   <h3>{item.title}</h3>
-                  <p>{mode ? item.complete : item.pending}</p>
+                  <p>
+                    {mode && item.id === "stressed"
+                      ? `Scope price changed from ${demo.healthyLabel} to ${demo.stressedLabel} locally.`
+                      : mode
+                        ? item.complete
+                        : item.pending}
+                  </p>
                 </li>
               );
             })}
@@ -397,19 +440,26 @@ export default function Home() {
             <div className="bid-overview">
               <span className="field-label">MARKET</span>
               <h3>
-                NVDAx <span>/</span> USDC
+                {symbol} <span>/</span> USDC
               </h3>
-              <p>Kamino v2 · xStocks market</p>
+              <p>{demo.market}</p>
               <div className="bid-terms">
                 <div>
                   <span>Fixed price</span>
-                  <strong>150 USDC</strong>
-                  <small>per 100,000,000 raw NVDAx atoms</small>
+                  <strong>{usd(demo.price.toString())} USDC</strong>
+                  <small>
+                    per {symbol} ({demo.pair.scale.toLocaleString("en-US")} raw
+                    atoms)
+                  </small>
                 </div>
                 <div>
                   <span>Maximum quantity</span>
-                  <strong>1,000,000,000</strong>
-                  <small>raw NVDAx atoms</small>
+                  <strong>
+                    {tokens(demo.quantity, decimals)} {symbol}
+                  </strong>
+                  <small>
+                    {demo.quantity.toLocaleString("en-US")} raw atoms
+                  </small>
                 </div>
                 <div>
                   <span>Commitment starts</span>
@@ -447,7 +497,7 @@ export default function Home() {
                 <span className="funded-chip">FUNDED UPFRONT</span>
               </div>
               <div className="capital-number">
-                1,500.000000 <span>USDC</span>
+                {usd(budget.toString())} <span>USDC</span>
               </div>
               <div
                 className="capacity-track"
@@ -498,18 +548,19 @@ export default function Home() {
             </div>
             <p>
               Mainnet Jupiter indication, not executed. The quote uses exactly{" "}
-              {integer(settlement?.deliveredNvdaAtoms)} raw NVDAx atoms. Mainnet
-              prices and the replay’s locally stressed Scope price of 150
-              differ; these figures do not measure a stress-market advantage.
+              {integer(settlement?.deliveredCollateralAtoms)} raw {symbol}{" "}
+              atoms. Mainnet prices and the replay’s locally stressed Scope
+              price of {demo.stressedLabel} differ; these figures do not measure
+              a stress-market advantage.
             </p>
             {comparison && (
               <p>
                 Mainnet reference:{" "}
                 {comparison.referencePriceUsd
-                  ? `${comparison.referencePriceUsd} USD per 100,000,000 raw atoms`
+                  ? `${comparison.referencePriceUsd} USD per ${symbol}`
                   : "unavailable"}
-                . Local Scope reference: 150 at settlement. Raw quantities are
-                not automatically UI-scaled share quantities.
+                . Local Scope reference: {demo.stressedLabel} at settlement. Raw
+                quantities are not automatically UI-scaled share quantities.
               </p>
             )}
             {comparison && (
@@ -593,7 +644,12 @@ export default function Home() {
           </div>
         </section>
 
-        <MarketRisk remainingUsdcAtoms={settlement?.remainingFunds} />
+        <MarketRisk
+          remainingUsdcAtoms={settlement?.remainingFunds}
+          fundedUsdcAtoms={budget.toString()}
+          bidLabel={`${usd(demo.price.toString())} USDC per ${symbol}`}
+          symbol={symbol}
+        />
 
         <section className="section" id="settlement">
           <div className="section-title">
@@ -634,13 +690,18 @@ export default function Home() {
             <div className="delivery-summary">
               <span className="field-label">DELIVERED TO PROVIDER</span>
               <div className="delivery-number">
-                {integer(settlement?.deliveredNvdaAtoms)}
+                {tokens(settlement?.deliveredCollateralAtoms, decimals)}
               </div>
-              <div className="delivery-unit">raw NVDAx atoms</div>
+              <div className="delivery-unit">
+                {symbol} · {integer(settlement?.deliveredCollateralAtoms)} raw
+                atoms
+              </div>
               <div className="delivery-divider" />
               <div className="delivery-row">
                 <span>Quantity remaining</span>
-                <strong>{integer(settlement?.remainingQuantity)} atoms</strong>
+                <strong>
+                  {tokens(settlement?.remainingQuantity, decimals)} {symbol}
+                </strong>
               </div>
               <div className="delivery-row">
                 <span>Bid address</span>
@@ -690,7 +751,7 @@ export default function Home() {
             </div>
             <p>
               {depletion
-                ? `The new bid bought ${integer(depletion.deliveredNvdaAtoms)} raw NVDAx atoms and spent its entire escrow. Another attempt was rejected in simulation because the bid was exhausted; no transaction was submitted. The client also refused to prepare it.`
+                ? `The new bid bought ${tokens(depletion.deliveredCollateralAtoms, decimals)} ${symbol} and spent its entire escrow. Another attempt was rejected in simulation because the bid was exhausted; no transaction was submitted. The client also refused to prepare it.`
                 : "After the main lifecycle, a new bid funds exactly the measured delivery, executes through real Kamino and verifies zero funds, zero quantity and Exhausted state before testing another attempt."}
             </p>
             {depletion && (
@@ -823,7 +884,7 @@ export default function Home() {
       </main>
       <footer className="footer">
         <span>Bidwall / local operator demo</span>
-        <span>Fixed NVDAx–USDC route · raw token units</span>
+        <span>Fixed {symbol}–USDC route · raw token units</span>
       </footer>
     </div>
   );

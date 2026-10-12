@@ -13,6 +13,7 @@ import {
 
 const receipt: DemoReceipt = {
   status: "passed",
+  pair: { id: "nvdax", symbol: "NVDAx", decimals: 8 },
   startedAt: "2026-10-03T22:00:00Z",
   upstreamSlot: 449746339,
   fixtureSha256: "a".repeat(64),
@@ -24,7 +25,7 @@ const receipt: DemoReceipt = {
     paidUsdcAtoms: "594633549",
     repaidUsdcAtoms: "566377120",
     borrowerUsdcAtoms: "28256429",
-    deliveredNvdaAtoms: "396422366",
+    deliveredCollateralAtoms: "396422366",
     remainingQuantity: "603577634",
     remainingFunds: "905366451",
   },
@@ -47,7 +48,10 @@ describe("exact delivered-quantity demo quote", () => {
     // Different from the observer's fixed demo lot: the receipt controls quantity.
     const custom = {
       ...receipt,
-      settlement: { ...receipt.settlement!, deliveredNvdaAtoms: "396422367" },
+      settlement: {
+        ...receipt.settlement!,
+        deliveredCollateralAtoms: "396422367",
+      },
     };
     const { client, calls } = clientFor(
       quoteBody(NVDAX, 396422367n, 929639512n)
@@ -62,6 +66,33 @@ describe("exact delivered-quantity demo quote", () => {
     expect(quote.observedAt).toBe(now.toISOString());
     expect(quote.routeLabels).toEqual(["Riptide"]);
     expect(raw).toHaveProperty("exchanges");
+  });
+  test("quotes the receipt's own collateral mint and decimals", async () => {
+    const ONYC = "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5";
+    const onyc: DemoReceipt = {
+      ...receipt,
+      pair: { id: "onyc", symbol: "ONyc", decimals: 9 },
+      settlement: {
+        ...receipt.settlement!,
+        deliveredCollateralAtoms: "1234000000000",
+      },
+    };
+    const fake = fakeFetch((url) =>
+      url.pathname.includes("tokens")
+        ? json([tokenEntry(ONYC, "ONyc", 1.07, 9)])
+        : json(quoteBody(ONYC, 1234000000000n, 1300000000n))
+    );
+    const client = createJupiterClient({
+      fetch: fake.fetch,
+      sleep: async () => {},
+    });
+    const { quote } = await quoteDelivery(onyc, client, now);
+    const params = new URL(fake.calls[1]!).searchParams;
+    expect(params.get("inputMint")).toBe(ONYC);
+    expect(params.get("amount")).toBe("1234000000000");
+    expect(quote.status).toBe("ok");
+    expect(quote.inputDecimals).toBe(9);
+    expect(quote.referencePriceUsd).toBe("1.07");
   });
   test.each([
     { inputMint: "wrong-mint" },
@@ -104,7 +135,7 @@ describe("exact delivered-quantity demo quote", () => {
       { ...receipt, settlement: undefined },
       {
         ...receipt,
-        settlement: { ...receipt.settlement!, deliveredNvdaAtoms: "0" },
+        settlement: { ...receipt.settlement!, deliveredCollateralAtoms: "0" },
       },
     ])
       await expect(quoteDelivery(candidate, client, now)).rejects.toThrow(

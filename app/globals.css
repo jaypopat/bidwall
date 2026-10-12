@@ -518,6 +518,30 @@ h1 span {
   line-height: 0.7;
   font-weight: 400;
 }
+.pair-select {
+  display: flex;
+  width: 100%;
+  border: 1px solid var(--line);
+}
+.pair-select button {
+  flex: 1;
+  padding: 8px 10px;
+  background: transparent;
+  border: 0;
+  color: var(--quiet);
+  font: 500 10px var(--mono);
+  cursor: pointer;
+}
+.pair-select button + button {
+  border-left: 1px solid var(--line);
+}
+.pair-select button[aria-checked="true"] {
+  background: var(--surface);
+  color: var(--accent);
+}
+.pair-select button:disabled {
+  cursor: not-allowed;
+}
 .intro-action > span {
   color: var(--quiet);
   font-size: 10px;

@@ -12,8 +12,15 @@ export type DemoStage = {
   mode: "confirmed" | "rejected-in-simulation" | "local-override";
 };
 
+export type DemoPair = {
+  id: "nvdax" | "onyc";
+  symbol: string;
+  decimals: number;
+};
+
 export type DemoReceipt = {
   status: "running" | "passed" | "failed";
+  pair: DemoPair;
   startedAt: string;
   upstreamSlot: number;
   fixtureSha256: string;
@@ -31,7 +38,7 @@ export type DemoReceipt = {
   depletion?: {
     bid: string;
     fundedUsdcAtoms: string;
-    deliveredNvdaAtoms: string;
+    deliveredCollateralAtoms: string;
     remainingFunds: string;
     remainingQuantity: string;
     uncoveredRepayUsdcAtoms: string;
@@ -44,7 +51,7 @@ export type DemoReceipt = {
     paidUsdcAtoms: string;
     repaidUsdcAtoms: string;
     borrowerUsdcAtoms: string;
-    deliveredNvdaAtoms: string;
+    deliveredCollateralAtoms: string;
     remainingQuantity: string;
     remainingFunds: string;
   };
@@ -61,7 +68,7 @@ export type DemoQuote = {
   observedAt: string;
   inputMint: string;
   outputMint: string;
-  inputDecimals: 8;
+  inputDecimals: number;
   outputDecimals: 6;
   inAmountRaw: string;
   slippageBps: number;

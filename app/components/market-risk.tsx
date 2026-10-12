@@ -33,8 +33,14 @@ function quoteAge(seconds: number | null) {
 
 export function MarketRisk({
   remainingUsdcAtoms,
+  fundedUsdcAtoms,
+  bidLabel,
+  symbol,
 }: {
   remainingUsdcAtoms?: string;
+  fundedUsdcAtoms: string;
+  bidLabel: string;
+  symbol: string;
 }) {
   const [snapshot, setSnapshot] = useState<RiskSnapshot | null>(null);
   const [scenarioId, setScenarioId] = useState("all-20");
@@ -190,19 +196,20 @@ export function MarketRisk({
           </div>
         </div>
         <aside className="risk-demo-capacity">
-          <span className="field-label">LOCAL DEMO / NVDAx ONLY</span>
+          <span className="field-label">LOCAL DEMO / {symbol} ONLY</span>
           <strong>
-            {remainingUsdcAtoms
-              ? dollars((Number(remainingUsdcAtoms) / 1_000_000).toFixed(6))
-              : "$1,500"}
+            {dollars(
+              (
+                Number(remainingUsdcAtoms ?? fundedUsdcAtoms) / 1_000_000
+              ).toFixed(6)
+            )}
             <span>USDC</span>
           </strong>
           <p>
             {remainingUsdcAtoms
               ? "Captured remaining escrow after settlement"
               : "Original funded commitment"}{" "}
-            · fixed bid at 150 USDC per NVDAx. Local test funds; no mainnet
-            capacity.
+            · fixed bid at {bidLabel}. Local test funds; no mainnet capacity.
           </p>
         </aside>
       </div>

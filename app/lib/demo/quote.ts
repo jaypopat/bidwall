@@ -6,16 +6,12 @@ import {
   createJupiterClient,
   type JupiterClient,
 } from "../../../scripts/quotes/jupiter.ts";
-import {
-  SLIPPAGE_BPS,
-  TRACKED_TOKENS,
-  USDC,
-} from "../../../scripts/quotes/tokens.ts";
+import { SLIPPAGE_BPS, USDC } from "../../../scripts/quotes/tokens.ts";
+import { kaminoPair } from "../bidwall/kamino";
 import type { DemoQuote, DemoReceipt } from "./types";
 
-const inputMint = TRACKED_TOKENS.find(
-  (token) => token.symbol === "NVDAx"
-)!.mint;
+/** The collateral the receipt's bid actually received. */
+const collateralOf = (receipt: DemoReceipt) => kaminoPair(receipt.pair.id);
 const directory = resolve(process.cwd(), "build/demo");
 const latestPath = resolve(directory, "quote.json");
 
@@ -28,10 +24,12 @@ export async function quoteDelivery(
   if (
     receipt.status !== "passed" ||
     !receipt.settlement ||
-    BigInt(receipt.settlement.deliveredNvdaAtoms) <= 0n
+    BigInt(receipt.settlement.deliveredCollateralAtoms) <= 0n
   )
     throw new Error("A passed settlement receipt is required");
-  const amount = BigInt(receipt.settlement.deliveredNvdaAtoms);
+  const pair = collateralOf(receipt);
+  const inputMint = pair.collateralMint;
+  const amount = BigInt(receipt.settlement.deliveredCollateralAtoms);
   const lookup = await client.getTokens([inputMint]);
   const result = await client.getQuote({
     inputMint,
@@ -44,14 +42,14 @@ export async function quoteDelivery(
     observedAt: now.toISOString(),
     inputMint,
     outputMint: USDC.mint,
-    inputDecimals: 8,
+    inputDecimals: pair.decimals,
     outputDecimals: 6,
     inAmountRaw: amount.toString(),
     slippageBps: SLIPPAGE_BPS,
   };
   if (lookup.status === "ok") {
     const token = lookup.tokens.find(
-      (token) => token.mint === inputMint && token.decimals === 8
+      (token) => token.mint === inputMint && token.decimals === pair.decimals
     );
     if (token && Number.isFinite(token.usdPrice) && token.usdPrice > 0)
       quote.referencePriceUsd = token.usdPrice.toString();
@@ -129,13 +127,14 @@ export async function readDeliveryQuote(
     if (!receipt.settlement || receipt.status !== "passed") return undefined;
     const saved = JSON.parse(await readFile(latestPath, "utf8"));
     const q = saved.quote as DemoQuote;
+    const pair = collateralOf(receipt);
     if (
       saved.receiptStartedAt !== receipt.startedAt ||
       saved.bid !== receipt.settlement?.bid ||
-      q.inAmountRaw !== receipt.settlement.deliveredNvdaAtoms ||
-      q.inputMint !== inputMint ||
+      q.inAmountRaw !== receipt.settlement.deliveredCollateralAtoms ||
+      q.inputMint !== pair.collateralMint ||
       q.outputMint !== USDC.mint ||
-      q.inputDecimals !== 8 ||
+      q.inputDecimals !== pair.decimals ||
       q.outputDecimals !== 6 ||
       q.slippageBps !== SLIPPAGE_BPS ||
       !["ok", "no-route", "error"].includes(q.status) ||

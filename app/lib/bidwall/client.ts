@@ -27,10 +27,12 @@ import {
   liquidationAccounts,
   refreshInstructions,
   refreshObligationInstruction,
+  type KaminoPair,
 } from "./kamino";
 import { assertU64, consideration } from "./units";
 export * from "./units";
 export * from "./kamino";
+export * from "./demo-terms";
 export function decodeBid(data: Uint8Array, owner: Address): Bid {
   if (
     owner !== BIDWALL_PROGRAM_ADDRESS ||
@@ -40,7 +42,11 @@ export function decodeBid(data: Uint8Array, owner: Address): Bid {
     throw new Error("Invalid Bidwall bid account");
   return getBidDecoder().decode(data);
 }
-export async function bidAddresses(provider: Address, id: bigint) {
+export async function bidAddresses(
+  pair: KaminoPair,
+  provider: Address,
+  id: bigint
+) {
   const [bid] = await findBidPda({ provider, id: assertU64(id) });
   const [[escrow], [liquidator]] = await Promise.all([
     findEscrowPda({ bid }),
@@ -55,23 +61,24 @@ export async function bidAddresses(provider: Address, id: bigint) {
     providerUsdc: await ata(provider, KAMINO.usdcMint, KAMINO.tokenProgram),
     providerCollateral: await ata(
       provider,
-      KAMINO.collateralMint,
-      KAMINO.collateralTokenProgram
+      pair.collateralMint,
+      pair.collateralTokenProgram
     ),
     sourceUsdc: await ata(liquidator, KAMINO.usdcMint, KAMINO.tokenProgram),
     destinationCtoken: await ata(
       liquidator,
-      KAMINO.ctokenMint,
+      pair.ctokenMint,
       KAMINO.tokenProgram
     ),
     destinationCollateral: await ata(
       liquidator,
-      KAMINO.collateralMint,
-      KAMINO.collateralTokenProgram
+      pair.collateralMint,
+      pair.collateralTokenProgram
     ),
   };
 }
 export async function prepareBid(input: {
+  pair: KaminoPair;
   provider: TransactionSigner;
   market: Address;
   id: bigint;
@@ -81,7 +88,8 @@ export async function prepareBid(input: {
   expiry: bigint;
   now: bigint;
 }) {
-  const { provider, market, id, price, quantity, start, expiry, now } = input;
+  const { pair, provider, market, id, price, quantity, start, expiry, now } =
+    input;
   if (
     price <= 0n ||
     quantity <= 0n ||
@@ -91,9 +99,9 @@ export async function prepareBid(input: {
     expiry >= 1n << 63n
   )
     throw new Error("Invalid bid terms or time window");
-  const budget = consideration(quantity, price);
+  const budget = consideration(quantity, price, pair.scale);
   if (budget === 0n) throw new Error("Bid budget rounds to zero");
-  const accounts = await bidAddresses(provider.address, id);
+  const accounts = await bidAddresses(pair, provider.address, id);
   const common = { ...accounts, provider, market, usdcMint: KAMINO.usdcMint };
   return {
     ...accounts,
@@ -114,6 +122,7 @@ export async function prepareBid(input: {
   };
 }
 export async function prepareSettlement(input: {
+  pair: KaminoPair;
   keeper: TransactionSigner;
   bid: Bid;
   obligation: Address;
@@ -124,6 +133,7 @@ export async function prepareSettlement(input: {
   now: bigint;
 }) {
   const {
+    pair,
     bid,
     keeper,
     obligation,
@@ -146,7 +156,7 @@ export async function prepareSettlement(input: {
   )
     throw new Error("Insufficient bid capacity for requested bounds");
   assertU64(expectedDepositedCtokens);
-  const accounts = await bidAddresses(bid.provider, bid.id);
+  const accounts = await bidAddresses(pair, bid.provider, bid.id);
   const [borrowerUsdc] = await findAssociatedTokenPda({
     owner: borrower,
     mint: KAMINO.usdcMint,
@@ -162,20 +172,20 @@ export async function prepareSettlement(input: {
     ],
     [
       accounts.liquidator,
-      KAMINO.ctokenMint,
+      pair.ctokenMint,
       KAMINO.tokenProgram,
       accounts.destinationCtoken,
     ],
     [
       accounts.liquidator,
-      KAMINO.collateralMint,
-      KAMINO.collateralTokenProgram,
+      pair.collateralMint,
+      pair.collateralTokenProgram,
       accounts.destinationCollateral,
     ],
     [
       bid.provider,
-      KAMINO.collateralMint,
-      KAMINO.collateralTokenProgram,
+      pair.collateralMint,
+      pair.collateralTokenProgram,
       accounts.providerCollateral,
     ],
     [borrower, KAMINO.usdcMint, KAMINO.tokenProgram, borrowerUsdc],
@@ -194,9 +204,9 @@ export async function prepareSettlement(input: {
     keeper,
     market: bid.market,
     borrowerUsdc,
-    repaySupply: KAMINO.repaySupply,
-    collateralMint: KAMINO.collateralMint,
-    collateralTokenProgram: KAMINO.collateralTokenProgram,
+    repaySupply: pair.repaySupply,
+    collateralMint: pair.collateralMint,
+    collateralTokenProgram: pair.collateralTokenProgram,
     maxRepay,
     minCollateral,
     expectedRemaining: bid.remainingQuantity,
@@ -206,7 +216,7 @@ export async function prepareSettlement(input: {
     ...ix,
     accounts: [
       ...ix.accounts,
-      ...(await liquidationAccounts({ ...accounts, obligation })),
+      ...(await liquidationAccounts(pair, { ...accounts, obligation })),
     ],
   };
   return {
@@ -214,8 +224,8 @@ export async function prepareSettlement(input: {
     borrowerUsdc,
     setup,
     instructions: [
-      ...refreshInstructions(),
-      refreshObligationInstruction(obligation),
+      ...refreshInstructions(pair),
+      refreshObligationInstruction(pair, obligation),
       settlement,
     ],
   };

@@ -2,8 +2,15 @@ import "server-only";
 import { spawn } from "node:child_process";
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
-import type { DemoReceipt, DemoResponse, DemoStage, DemoStep } from "./types";
+import type {
+  DemoPair,
+  DemoReceipt,
+  DemoResponse,
+  DemoStage,
+  DemoStep,
+} from "./types";
 import { readDeliveryQuote } from "./quote";
+import { DEMO_TERMS, demoBudget, type DemoTerms } from "../bidwall/demo-terms";
 
 const receiptPath = resolve(process.cwd(), "build/demo/receipt.json");
 const localNames = new Set(["localhost", "127.0.0.1", "::1"]);
@@ -64,7 +71,7 @@ function readSettlement(value: unknown): DemoReceipt["settlement"] {
       s.paidUsdcAtoms,
       s.repaidUsdcAtoms,
       s.borrowerUsdcAtoms,
-      s.deliveredNvdaAtoms,
+      s.deliveredCollateralAtoms,
       s.remainingQuantity,
       s.remainingFunds,
     ].every(isAtoms)
@@ -76,10 +83,27 @@ function readSettlement(value: unknown): DemoReceipt["settlement"] {
     paidUsdcAtoms: s.paidUsdcAtoms,
     repaidUsdcAtoms: s.repaidUsdcAtoms,
     borrowerUsdcAtoms: s.borrowerUsdcAtoms,
-    deliveredNvdaAtoms: s.deliveredNvdaAtoms,
+    deliveredCollateralAtoms: s.deliveredCollateralAtoms,
     remainingQuantity: s.remainingQuantity,
     remainingFunds: s.remainingFunds,
   } as DemoReceipt["settlement"];
+}
+
+/** Receipts name their pair; the pair fixes the terms every amount must match. */
+function readPair(value: unknown): { pair: DemoPair; terms: DemoTerms } | null {
+  if (!value || typeof value !== "object") return null;
+  const p = value as Record<string, unknown>;
+  const terms = DEMO_TERMS[p.id as DemoPair["id"]];
+  if (
+    !terms ||
+    p.symbol !== terms.pair.symbol ||
+    p.decimals !== terms.pair.decimals
+  )
+    return null;
+  return {
+    pair: { id: terms.pair.id, symbol: p.symbol, decimals: p.decimals },
+    terms,
+  };
 }
 
 async function readReceipt(): Promise<DemoReceipt | null> {
@@ -96,6 +120,10 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       !Array.isArray(raw.transactions)
     )
       return null;
+    const scenario = readPair(raw.pair);
+    if (!scenario) return null;
+    const { pair, terms: demo } = scenario;
+    const budget = demoBudget(demo);
     const settlement = readSettlement(raw.settlement);
     if (raw.status === "passed" && !settlement) return null;
     if (settlement) {
@@ -104,10 +132,10 @@ async function readReceipt(): Promise<DemoReceipt | null> {
           BigInt(settlement.repaidUsdcAtoms) +
             BigInt(settlement.borrowerUsdcAtoms) ||
         BigInt(settlement.paidUsdcAtoms) + BigInt(settlement.remainingFunds) !==
-          1_500_000_000n ||
-        BigInt(settlement.deliveredNvdaAtoms) +
+          budget ||
+        BigInt(settlement.deliveredCollateralAtoms) +
           BigInt(settlement.remainingQuantity) !==
-          1_000_000_000n
+          demo.quantity
       )
         return null;
     }
@@ -188,9 +216,9 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       (!commitment ||
         BigInt(commitment.start) > BigInt(commitment.scenarioNow) ||
         BigInt(commitment.scenarioNow) >= BigInt(commitment.expiry) ||
-        commitment.price !== "150000000" ||
-        commitment.quantity !== "1000000000" ||
-        commitment.fundedUsdcAtoms !== "1500000000")
+        commitment.price !== demo.price.toString() ||
+        commitment.quantity !== demo.quantity.toString() ||
+        commitment.fundedUsdcAtoms !== budget.toString())
     )
       return null;
     const d = raw.depletion;
@@ -199,7 +227,7 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       isAddress(d.bid) &&
       [
         d.fundedUsdcAtoms,
-        d.deliveredNvdaAtoms,
+        d.deliveredCollateralAtoms,
         d.remainingFunds,
         d.remainingQuantity,
         d.uncoveredRepayUsdcAtoms,
@@ -209,12 +237,12 @@ async function readReceipt(): Promise<DemoReceipt | null> {
       d.remainingQuantity === "0" &&
       d.bid !== settlement?.bid &&
       d.fundedUsdcAtoms === settlement?.paidUsdcAtoms &&
-      d.deliveredNvdaAtoms === settlement?.deliveredNvdaAtoms &&
+      d.deliveredCollateralAtoms === settlement?.deliveredCollateralAtoms &&
       d.uncoveredRepayUsdcAtoms === settlement?.repaidUsdcAtoms
         ? ({
             bid: d.bid,
             fundedUsdcAtoms: d.fundedUsdcAtoms,
-            deliveredNvdaAtoms: d.deliveredNvdaAtoms,
+            deliveredCollateralAtoms: d.deliveredCollateralAtoms,
             remainingFunds: d.remainingFunds,
             remainingQuantity: d.remainingQuantity,
             uncoveredRepayUsdcAtoms: d.uncoveredRepayUsdcAtoms,
@@ -225,6 +253,7 @@ async function readReceipt(): Promise<DemoReceipt | null> {
     const capacity = raw.capacityFailure;
     return {
       status: raw.status,
+      pair,
       startedAt: raw.startedAt,
       upstreamSlot: raw.upstreamSlot,
       fixtureSha256: raw.fixtureSha256,
@@ -268,7 +297,7 @@ export async function getDemoResponse(): Promise<DemoResponse> {
   };
 }
 
-export function startDemo(): boolean {
+export function startDemo(pair: DemoPair["id"]): boolean {
   if (state.running) return false;
   state.running = true;
   state.startedAt = Date.now();
@@ -276,7 +305,7 @@ export function startDemo(): boolean {
   state.error = undefined;
   const child = spawn("npm", ["run", "demo:kamino"], {
     cwd: process.cwd(),
-    env: { ...process.env, NO_DNA: "1" },
+    env: { ...process.env, NO_DNA: "1", DEMO_PAIR: pair },
     stdio: ["ignore", "pipe", "pipe"],
   });
   const append = (chunk: Buffer) => {

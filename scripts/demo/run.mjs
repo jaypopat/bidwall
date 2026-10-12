@@ -12,12 +12,15 @@ import { startRuntime, transactionRunner } from "./runtime.mjs";
 const require = createRequire(import.meta.url);
 const client = require("../../build/client/app/lib/bidwall/client.js");
 const generated = require("../../build/client/app/generated/bidwall/index.js");
+// DEMO_PAIR selects the reserve pair and its captured lender fixture.
+const terms = client.demoTerms(process.env.DEMO_PAIR ?? "nvdax");
+const { pair } = terms;
 const fixtureBytes = readFileSync(
-  "anchor/programs/bidwall/fixtures/kamino.json.gz"
+  `anchor/programs/bidwall/fixtures/${terms.fixture}`
 );
 const fixture = JSON.parse(gunzipSync(fixtureBytes));
 const manifest = JSON.parse(
-  readFileSync("anchor/programs/bidwall/fixtures/manifest.json")
+  readFileSync(`anchor/programs/bidwall/fixtures/${terms.manifest}`)
 );
 assert.equal(
   createHash("sha256").update(fixtureBytes).digest("hex"),
@@ -28,6 +31,7 @@ const runtime = await startRuntime();
 const { rpc, account } = runtime;
 const report = {
   environment: "local offline replay",
+  pair: { id: pair.id, symbol: pair.symbol, decimals: pair.decimals },
   startedAt: new Date().toISOString(),
   rpc: runtime.url,
   fixtureSha256: manifest.fixtureSha256,
@@ -140,11 +144,12 @@ try {
     report.transactions
   );
   const plan = await client.prepareBid({
+    pair,
     provider: payer,
     market: market.address,
     id: 1n,
-    price: 150_000_000n,
-    quantity: 1_000_000_000n,
+    price: terms.price,
+    quantity: terms.quantity,
     start: now - 1n,
     expiry: now + 3600n,
     now,
@@ -154,6 +159,8 @@ try {
       authority: payer,
       market,
       keeper: payer.address,
+      collateralMint: pair.collateralMint,
+      collateralTokenProgram: pair.collateralTokenProgram,
     }),
   ]);
   await transact("create, fund and activate bid", plan.instructions);
@@ -181,15 +188,17 @@ try {
   const loanAccount = await account(obligationAddress),
     loan = client.readObligation(
       loanAccount.data,
-      kit.address(loanAccount.owner)
+      kit.address(loanAccount.owner),
+      pair
     );
   const settlement = await client.prepareSettlement({
+    pair,
     keeper: payer,
     bid: await readBid(),
     obligation: obligationAddress,
     borrower: loan.owner,
     expectedDepositedCtokens: loan.depositedCtokens,
-    maxRepay: 1_000_000_000n,
+    maxRepay: terms.maxRepay,
     minCollateral: 1n,
     now,
   });
@@ -226,18 +235,24 @@ try {
   });
   markStage("locked", "rejected-in-simulation");
   const originalOracle = await account(client.KAMINO.scope);
+  // Scope entries 13 and 456 are USDC spot/TWAP; they only get fresh timestamps.
+  const scaledPrice = ([mantissa, shift], exp) =>
+    mantissa * 10n ** (exp - shift);
   const setPrice = async (healthy) => {
     const data = Buffer.from(originalOracle.data);
     const currentClock = (
       await account("SysvarC1ock11111111111111111111111111111111")
     ).data;
-    for (const i of [332, 269, 13, 456]) {
+    for (const i of [...terms.scopeIndices, 13, 456]) {
       const offset = 40 + i * 56;
       data.writeBigUInt64LE(currentClock.readBigUInt64LE(0), offset + 16);
       data.writeBigInt64LE(currentClock.readBigInt64LE(32), offset + 24);
-      if (i === 332 || i === 269)
+      if (terms.scopeIndices.includes(i))
         data.writeBigUInt64LE(
-          (healthy ? 225n : 150n) * 10n ** data.readBigUInt64LE(offset + 8),
+          scaledPrice(
+            healthy ? terms.healthyPrice : terms.stressedPrice,
+            data.readBigUInt64LE(offset + 8)
+          ),
           offset
         );
     }
@@ -253,18 +268,20 @@ try {
   markStage("healthy", "rejected-in-simulation");
   await setPrice(false);
   const stressedOracle = (await account(client.KAMINO.scope)).data;
-  for (const i of [332, 269]) {
+  for (const i of terms.scopeIndices) {
     const offset = 40 + i * 56;
     assert.equal(
-      stressedOracle.readBigUInt64LE(offset) /
-        10n ** stressedOracle.readBigUInt64LE(offset + 8),
-      150n
+      stressedOracle.readBigUInt64LE(offset),
+      scaledPrice(
+        terms.stressedPrice,
+        stressedOracle.readBigUInt64LE(offset + 8)
+      )
     );
   }
   markStage("stressed", "local-override");
   const watched = [
     plan.escrow,
-    client.KAMINO.repaySupply,
+    pair.repaySupply,
     plan.providerCollateral,
     settlement.borrowerUsdc,
     plan.sourceUsdc,
@@ -296,7 +313,8 @@ try {
     client.fillConsideration(
       bidBefore.quantity - bidBefore.remainingQuantity,
       received,
-      bidBefore.price
+      bidBefore.price,
+      pair.scale
     )
   );
   assert.equal(
@@ -308,17 +326,17 @@ try {
   report.settlement = {
     bid: plan.bid,
     obligation: obligationAddress,
-    priceDenomination: "USDC atoms per 100000000 raw NVDAx atoms",
+    priceDenomination: `USDC atoms per ${pair.scale} raw ${pair.symbol} atoms`,
     paidUsdcAtoms: paid,
     repaidUsdcAtoms: repaid,
     borrowerUsdcAtoms: residual,
-    deliveredNvdaAtoms: received,
+    deliveredCollateralAtoms: received,
     remainingQuantity: bidAfter.remainingQuantity,
     remainingFunds: bidAfter.remainingFunds,
   };
   markStage("settled", "confirmed");
   console.log(
-    `SETTLED: ${client.formatAtoms(repaid, 6)} USDC repaid; ${received} raw NVDAx atoms delivered; ${client.formatAtoms(residual, 6)} USDC borrower surplus`
+    `SETTLED: ${client.formatAtoms(repaid, 6)} USDC repaid; ${client.formatAtoms(received, pair.decimals)} ${pair.symbol} delivered; ${client.formatAtoms(residual, 6)} USDC borrower surplus`
   );
   await transact("replay with stale bid expectation", settlement.instructions, {
     expectedError: { InstructionError: [4, { Custom: 6004 }] },
@@ -327,6 +345,7 @@ try {
   await assert.rejects(
     () =>
       client.prepareSettlement({
+        pair,
         keeper: payer,
         bid: bidAfter,
         obligation: obligationAddress,
@@ -393,6 +412,7 @@ try {
   ]);
   await setPrice(false);
   const exactPlan = await client.prepareBid({
+    pair,
     provider: payer,
     market: market.address,
     id: 2n,
@@ -412,13 +432,16 @@ try {
     exactAccount.data,
     kit.address(exactAccount.owner)
   );
+  // Size repayment to the first fill's actual repayment: passing the whole budget
+  // can make Kamino seize more collateral than the bid holds, which Bidwall rejects.
   const exactSettlement = await client.prepareSettlement({
+    pair,
     keeper: payer,
     bid: exactBid,
     obligation: obligationAddress,
     borrower: loan.owner,
     expectedDepositedCtokens: loan.depositedCtokens,
-    maxRepay: paid,
+    maxRepay: repaid,
     minCollateral: received,
     now,
   });
@@ -460,6 +483,7 @@ try {
   await assert.rejects(
     () =>
       client.prepareSettlement({
+        pair,
         keeper: payer,
         bid: exhausted,
         obligation: obligationAddress,
@@ -482,7 +506,7 @@ try {
   report.depletion = {
     bid: exactPlan.bid,
     fundedUsdcAtoms: paid,
-    deliveredNvdaAtoms: received,
+    deliveredCollateralAtoms: received,
     remainingFunds: exhausted.remainingFunds,
     remainingQuantity: exhausted.remainingQuantity,
     uncoveredRepayUsdcAtoms: repaid,
