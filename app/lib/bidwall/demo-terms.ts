@@ -21,6 +21,8 @@ export type DemoTerms = {
   /** Oracle prices as [mantissa, shift]: value = mantissa × 10^(exp − shift). */
   healthyPrice: readonly [bigint, bigint];
   stressedPrice: readonly [bigint, bigint];
+  /** Captured loan's LTV before stress and Kamino's liquidation LTV, in percent. */
+  loanLtv?: { healthy: number; liquidation: number };
   /** Human-readable prices for the console. */
   healthyLabel: string;
   stressedLabel: string;
@@ -53,6 +55,7 @@ export const DEMO_TERMS: Record<KaminoPair["id"], DemoTerms> = {
     healthyPrice: [115n, 2n],
     // Kamino's lowest accepted ONyc price (reserve heuristic lower bound).
     stressedPrice: [95n, 2n],
+    loanLtv: { healthy: 65.4, liquidation: 75 },
     healthyLabel: "1.15",
     stressedLabel: "0.95",
   },
