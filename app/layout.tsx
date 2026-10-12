@@ -16,9 +16,9 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Bidwall — Funded liquidation capacity",
+  title: "Bidwall — Committed exit liquidity for tokenized credit",
   description:
-    "Inspect a funded NVDAx/USDC liquidation commitment and its verified local settlement.",
+    "Funded, fixed-price bids that settle inside Kamino liquidations of RWA and tokenized-credit collateral.",
   icons: {
     icon: "/icon.svg",
     shortcut: "/icon.svg",

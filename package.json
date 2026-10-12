@@ -27,7 +27,7 @@
     "test:risk": "bun test tests/risk",
     "test:demo": "bun test tests/demo"
   },
-  "description": "Funded, term-bound NVDAx/USDC liquidation bids settled through Kamino",
+  "description": "Committed exit liquidity for tokenized credit used as collateral on Solana: funded, fixed-price bids that settle inside Kamino liquidations",
   "keywords": [
     "anchor",
     "kit",

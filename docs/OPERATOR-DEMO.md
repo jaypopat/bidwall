@@ -1,7 +1,10 @@
 # Local operator demo and shared client (milestone 4)
 
-The demo now runs the complete commitment lifecycle against the captured real
-Kamino program without an upstream RPC connection. The same typed client can be
+The demo runs the complete commitment lifecycle against the captured real Kamino
+program without an upstream RPC connection, for either supported pair: OnRe
+ONyc/USDC (tokenized reinsurance credit) or xStocks NVDAx/USDC. Per-pair terms live
+in `app/lib/bidwall/demo-terms.ts` and are shared by the runner, console server and
+page; a receipt validates only against the terms of the pair it records. The same typed client can be
 used by the future console. No contract behavior was changed in this milestone.
 
 ## Run it
@@ -12,12 +15,14 @@ From the repository root:
 
 ```sh
 pnpm install --frozen-lockfile --ignore-scripts
-npm run demo:kamino
+npm run demo:kamino                  # NVDAx/USDC
+DEMO_PAIR=onyc npm run demo:kamino   # OnRe ONyc/USDC
 ```
 
 For the browser console, run `npm run dev:demo` and open
-<http://127.0.0.1:3000>. The Run local scenario button executes this same
-command and renders its verified receipt. See [frontend scope](FRONTEND.md): the
+<http://127.0.0.1:3000>. Choose ONyc / USDC (the default) or NVDAx / USDC; the
+run button executes this same command for that pair and renders its verified
+receipt. See [frontend scope](FRONTEND.md): the
 page is a scripted local launcher and receipt viewer, not wallet-driven bidding.
 Its stage cards advance during the run and distinguish confirmed transactions,
 simulation rejections and the local oracle override.
@@ -48,13 +53,15 @@ installation and an uncached Rust build can still require network access.
 1. Verify the committed fixture and deployed-program hashes against its manifest.
 2. Seed the captured lender state and programs into the local runtime; load the
    freshly built Bidwall program. Seed local SOL and provider USDC.
-3. Create a market and create/fund/activate a 1,500-USDC bid for up to
-   `1,000,000,000` raw NVDAx atoms at 150 USDC per `100,000,000` raw atoms.
+3. Create a market and create/fund/activate a bid. ONyc: 5,000 USDC for up to
+   5,000 ONyc at 1.00 USDC each. NVDAx: 1,500 USDC for up to `1,000,000,000` raw
+   NVDAx atoms at 150 USDC per `100,000,000` raw atoms.
 4. Create the liquidator, provider and borrower destination token accounts using
    normal associated-token instructions. Create and extend a real lookup table.
 5. Simulate and reject early withdrawal, then reject liquidation of a locally
-   healthy loan (scenario Scope spot/TWAP 225).
-6. Change the local Scope spot/TWAP to 150 and execute native refresh + Bidwall
+   healthy loan (scenario Scope spot/TWAP: ONyc 1.15, NVDAx 225).
+6. Lower the local Scope spot/TWAP (ONyc 0.95, Kamino's lowest accepted price;
+   NVDAx 150) and execute native refresh + Bidwall
    settlement. Verify all payment, delivery, intermediate-account and capacity deltas.
 7. Simulate and reject replay of the stale quote. Show an over-budget request
    rejected by the client before signing; no automatic reduction of the request.
@@ -62,22 +69,22 @@ installation and an uncached Rust build can still require network access.
    provider credit, empty escrow and the Withdrawn state.
 9. Restore captured lender state and scenario time for a clearly labelled,
    independent capacity case. Create/fund/activate a new bid for exactly the
-   measured delivery, with 594.633549 USDC in the verified run. Settle through
+   measured delivery (1,078.793553 USDC for ONyc, 594.633549 USDC for NVDAx). Settle through
    real Kamino; assert Exhausted state, zero escrow and zero remaining quantity.
 10. Verify that the client refuses another attempt, and that simulation rejects
     the previously prepared instructions with the exhausted-bid error. No failed
     transaction is submitted. This resets the same captured loan; it does not
     claim a second eligible mainnet loan or a measured market shortfall.
 
-Two fresh runs produced the same money flow:
+Verified runs produced these money flows:
 
-| Result                                 |                      Amount |
-| -------------------------------------- | --------------------------: |
-| Provider receives                      | 396,422,366 raw NVDAx atoms |
-| Bid consideration                      |             594.633549 USDC |
-| Debt repayment                         |             566.377120 USDC |
-| Borrower surplus                       |              28.256429 USDC |
-| Remaining funds subsequently withdrawn |             905.366451 USDC |
+| Result                                 |            ONyc/USDC |                  NVDAx/USDC |
+| -------------------------------------- | -------------------: | --------------------------: |
+| Provider receives                      | 1,078.793553683 ONyc | 396,422,366 raw NVDAx atoms |
+| Bid consideration                      |    1,078.793553 USDC |             594.633549 USDC |
+| Debt repayment                         |    1,000.000000 USDC |             566.377120 USDC |
+| Borrower surplus                       |       78.793553 USDC |              28.256429 USDC |
+| Remaining funds subsequently withdrawn |    3,921.206447 USDC |             905.366451 USDC |
 
 These are local replay results. Raw NVDAx units are not automatically equivalent to
 UI-scaled share quantities. The recorded milestone-3 transaction has slightly different
@@ -109,14 +116,14 @@ tests also submit failing transactions and verify rollback.
 
 ## Exact-quantity mainnet comparison
 
-After a passed run, click **Get mainnet quote**. The request is fixed to the verified
-NVDAx mint, USDC output, the receipt's delivered raw atoms and 50 bps slippage. The
+After a passed run, click **Get mainnet quote**. The request is fixed to the receipt's
+collateral mint and decimals, USDC output, the receipt's delivered raw atoms and 50 bps slippage. The
 server verifies input/output identities, ExactIn mode, quantity and output bounds.
 No route, request failure and a successful quote remain distinct states.
 
 The console shows output and minimum output, observation time/age, context slot,
 route and the Jupiter token-API reference price where available. It explicitly
-separates the mainnet price from the local Scope override of 150. This comparison
+separates the mainnet price from the local Scope override. This comparison
 does not establish superior stressed-market execution or profitable provider terms.
 
 Raw HTTP exchanges are saved under `build/demo/quote-*.json.gz` with SHA-256;
@@ -131,7 +138,7 @@ manual. These files, like the receipt, are ignored artifacts.
 | `app/generated/bidwall/`      | Codama bindings from the built Anchor IDL; account codecs, instructions and PDA derivation            |
 | `app/lib/bidwall/client.ts`   | Prepare bid lifecycle and bounded settlement instructions; derive destinations; account validation    |
 | `app/lib/bidwall/units.ts`    | Exact decimal-to-atom conversion and cumulative-floor consideration, using bigint                     |
-| `app/lib/bidwall/kamino.ts`   | The fixed public NVDAx/USDC route, native refresh accounts and narrow loan decoder                    |
+| `app/lib/bidwall/kamino.ts`   | The fixed Kamino pair table (ONyc/USDC, NVDAx/USDC), native refresh accounts and narrow loan decoder  |
 | `app/lib/bidwall/failures.ts` | Conservative explanations of named program errors; unknown failures remain unknown                    |
 | `scripts/demo/`               | Local runtime lifecycle, fixture seeding, scenario control, submission and receipts                   |
 | `scripts/kamino-fixture.mjs`  | Derive the capture manifest from exact fixture bytes, binary hashes and the recorded settlement event |
@@ -149,7 +156,7 @@ there is no generic arbitrary-lender dispatch or silent fallback.
 ## Verification and code generation
 
 ```sh
-npm run anchor-test     # 42 workspace tests and SBF/IDL builds
+npm run anchor-test     # 44 workspace tests and SBF/IDL builds
 npm run test:client     # 6 tests, including exact fixture wire/account compatibility
 npm run demo:kamino     # fresh offline runtime and complete lifecycle
 npm run ci             # web build, lint, formatting, quote/risk/demo tests
