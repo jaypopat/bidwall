@@ -1,5 +1,5 @@
 /** Research figures quoted by the story page. Source: Kamino market API and
- * Jupiter sell quotes, 12 October 2026 (docs/research/2026-10-12-rwa-collateral-wedge.md).
+ * Jupiter sell quotes, 12 October 2026.
  */
 export const OBSERVED_AT = "12 Oct 2026";
 

@@ -1,5 +1,5 @@
 /** Narrow Kamino routes, matching the adapter's pair table and the captured klend
- * v2 interface. Source/schema provenance: docs/KAMINO-INTEGRATION.md. This is not
+ * v2 interface. This is not
  * a generic SDK: every account below is pinned per supported reserve pair.
  */
 import {

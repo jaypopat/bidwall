@@ -67,11 +67,11 @@ export function DemoNotice({ hosted }: { hosted: boolean }) {
           <p>
             Install the{" "}
             <a
-              href={`${REPO}/blob/main/docs/TOOLCHAIN.md`}
+              href={`${REPO}#local-development`}
               target="_blank"
               rel="noreferrer"
             >
-              toolchain and Surfpool
+              local development prerequisites
             </a>
             , then:
           </p>

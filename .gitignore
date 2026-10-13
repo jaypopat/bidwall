@@ -49,3 +49,6 @@ test-ledger/
 
 # Local fork runtime state
 **/.surfpool/
+
+# Submission materials
+/submission-media/
