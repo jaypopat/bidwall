@@ -13,30 +13,16 @@ the lender is repaid without relying on DEX depth.
 
 ## In plain English
 
-_Illustration using the demo's real settlement amounts._
-
-Alice holds ONyc, a token that earns reinsurance yield. She deposits it on Kamino,
-a Solana lending app, and borrows USDC against it.
-
-If ONyc's price falls far enough, her loan becomes unsafe and Kamino
-**liquidates** it: it takes some of her ONyc and sells it to repay the lender.
-One exit is a DEX. Our 12 October Jupiter snapshot quoted a $5M ONyc sale
-43% below oracle value. That route can consume a liquidation's entire margin;
-other routes, including OnRe's own liquidity engine, may offer better execution.
+Alice deposits ONyc, a token that earns reinsurance yield, on Kamino and borrows
+USDC against it. If her loan becomes unsafe, Kamino liquidates it: some of her
+ONyc must be sold to repay the lender.
 
 Bidwall gives that sale a buyer who is already waiting. A credit fund locks
-$4,700 in advance with a promise: _"I'll buy up to 5,000 ONyc at $0.94."_ When
-Alice's loan is liquidated, in one transaction:
+$4,700 with a promise: _"I'll buy up to 5,000 ONyc at $0.94."_ One transaction
+repays the lender, delivers ONyc to the fund and returns any surplus to Alice.
+See the [real replay's payment breakdown](#proof-a-real-onyc-loan) below.
 
-- $1,014.07 comes out of the fund's locked money
-- $1,000.00 repays the lender
-- $14.07 goes back to Alice
-- the fund receives 1,078.79 ONyc
-
-No DEX is involved. The bid is below the test's $0.95 oracle price. A provider
-with redemption access could seek to earn the discount, while taking credit,
-price and redemption-delay risk. These are demonstration terms, not a quote
-from an independent fund.
+These are demonstration terms, not a quote from an independent fund.
 
 ## The problem
 
@@ -60,10 +46,8 @@ from outside providers instead of requiring the issuer to fund all of it.
 
 ## The solution
 
-Bidwall turns that exit into a product someone else can supply. A provider (a
-credit fund or market maker) locks USDC in a bid: _"I will buy up to 5,000 ONyc at
-$0.94 until Friday."_ The funds can't be withdrawn early, so lenders and risk teams
-can count on them.
+Funds stay locked until expiry, giving lenders and risk teams a visible
+commitment at a fixed price, size and term.
 
 ```mermaid
 flowchart LR
@@ -74,10 +58,9 @@ flowchart LR
     B -- "collateral" --> P
 ```
 
-**Why focus on credit.** A slower-moving redemption value can make standing bids
-easier to price. A provider with redemption access can seek a discount, but still
-takes credit risk and locks capital until expiry. Whether issuers will pay for
-this capacity and providers will supply it at useful terms remains unvalidated.
+**Why credit first:** a slower-moving redemption value may make bids easier to
+price, though providers still take credit, price and redemption-delay risk;
+willingness to pay for or supply this capacity remains unvalidated.
 
 ## How a settlement works
 
